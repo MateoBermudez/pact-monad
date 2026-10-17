@@ -18,6 +18,7 @@ import {
 } from "@/lib/client/marketplace-wallet";
 import { usePact } from "@/lib/client/pact-context";
 import { EXPLORER_URL } from "@/lib/shared/chain";
+import { splitKeywords } from "@/lib/shared/keywords";
 import type { SessionUser } from "@/lib/shared/auth";
 import type {
   ListingDto,
@@ -87,11 +88,12 @@ export default function ListingDetail({ id }: { id: string }) {
   }
   async function act(app: ApplicationDto, action: string, confirmed = false) {
     if (action === "select" && !confirmed) {
+      setError("");
       setCandidate(app);
       return;
     }
     await perform(async () => {
-      if (action === "select" && !connected) await connectWallet();
+      if (action === "select" && !connected && !session.data?.user.wallet) await connectWallet();
       const r = await api<{ selection: SelectionResultDto | null }>(
         `/api/applications/${app.id}`,
         jsonRequest("PATCH", { action }),
@@ -132,13 +134,17 @@ export default function ListingDetail({ id }: { id: string }) {
     };
   }, [id]);
   const funding = call;
+  const showFunding = owner && listing?.status === "awarded" && !!funding;
+  useEffect(() => {
+    if (showFunding) document.getElementById("fondos")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [showFunding]);
   return (
     <Workspace
       title={listing?.title ?? "Oportunidad"}
       intro="Condiciones claras para empezar con confianza."
     >
       <LoadState {...state} retry={state.reload} />
-      {error && (
+      {error && !candidate && (
         <p role="alert" className="auth-error">
           {error}
         </p>
@@ -149,9 +155,9 @@ export default function ListingDetail({ id }: { id: string }) {
         </p>
       )}
       {candidate && (
+        <div className="workspace-modal" role="dialog" aria-modal="true">
         <section
-          className="workspace-card workspace-funding"
-          role="region"
+          className="workspace-card workspace-funding workspace-modal-card"
           aria-label="Confirmar proveedor"
         >
           <h2>
@@ -169,23 +175,32 @@ export default function ListingDetail({ id }: { id: string }) {
             Al confirmar se elige esta propuesta y se descartan las demás.
             Todavía no se bloquean fondos.
           </p>
+          {error && (
+            <p role="alert" className="auth-error">
+              {error}
+            </p>
+          )}
           <div className="workspace-actions">
             <button
               className="btn-primary"
               disabled={busy}
               onClick={() => void act(candidate, "select", true)}
             >
-              Confirmar proveedor
+              {busy ? "Eligiendo…" : "Confirmar proveedor"}
             </button>
             <button
               className="btn-secondary"
               disabled={busy}
-              onClick={() => setCandidate(null)}
+              onClick={() => {
+                setCandidate(null);
+                setError("");
+              }}
             >
               Seguir comparando
             </button>
           </div>
         </section>
+        </div>
       )}
       {listing && (
         <>
@@ -474,7 +489,7 @@ export default function ListingDetail({ id }: { id: string }) {
             </section>
           )}
           {owner && listing.status === "awarded" && funding && (
-            <section className="workspace-card workspace-funding">
+            <section id="fondos" className="workspace-card workspace-funding">
               <h2>Confirma y bloquea los fondos.</h2>
               <p>
                 Proveedor: <code>{funding.provider}</code>
@@ -588,9 +603,6 @@ export default function ListingDetail({ id }: { id: string }) {
     </Workspace>
   );
 }
-const splitKeywords = (value: string) =>
-  [...new Set(value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean))].slice(0, 20);
-
 const VERDICT_LABEL = {
   accept: "La IA recomienda aceptarla",
   review: "La IA sugiere revisarla",
