@@ -2,6 +2,7 @@ import "server-only";
 import { Contract, Interface, isAddress, Wallet, type InterfaceAbi } from "ethers";
 import abi from "@/abi/PactEscrow.json";
 import { getProvider } from "@/lib/server/chain/provider";
+import { withTransaction } from "@/lib/server/db";
 import { serverEnv } from "@/lib/server/env";
 import { ApiError } from "@/lib/server/http";
 import { CONTRACT_ADDRESS } from "@/lib/shared/chain";
@@ -39,12 +40,18 @@ export async function readMaxAutoRelease(): Promise<bigint> {
   return cap;
 }
 
-// Las transacciones del agente se encolan para no reutilizar nonce cuando llegan varias liberaciones a la vez.
-let agentQueue: Promise<unknown> = Promise.resolve();
+// Identificador del candado de la base que serializa los envíos del agente.
+const AGENT_TX_LOCK = 7_240_001;
 
+// El agente firma siempre con la misma wallet, y dos transacciones simultáneas reutilizarían el nonce. Con varias
+// instancias (Vercel) una cola en memoria no basta: el candado de la base las serializa entre procesos. Es de tipo
+// "de transacción", así que se suelta solo al terminar o si algo falla, y funciona con el pooler de Supabase.
 export function releaseByAgent(chainAgreementId: bigint, decisionHash: string): Promise<string> {
-  const run = agentQueue.then(async () => {
-    if (!serverEnv.agentPrivateKey) throw new ApiError(503, "agent_not_configured", "El agente de IA no está configurado");
+  if (!serverEnv.agentPrivateKey) {
+    return Promise.reject(new ApiError(503, "agent_not_configured", "El agente de IA no está configurado"));
+  }
+  return withTransaction(async (client) => {
+    await client.query("select pg_advisory_xact_lock($1)", [AGENT_TX_LOCK]);
     const signer = new Wallet(serverEnv.agentPrivateKey, getProvider());
     const contract = new Contract(contractAddress(), pactInterface, signer);
     const tx = await contract.releaseByAgent(chainAgreementId, decisionHash);
@@ -52,6 +59,4 @@ export function releaseByAgent(chainAgreementId: bigint, decisionHash: string): 
     if (!receipt || receipt.status !== 1) throw new Error("La transacción del agente falló");
     return receipt.hash as string;
   });
-  agentQueue = run.catch(() => undefined);
-  return run;
 }

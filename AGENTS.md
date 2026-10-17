@@ -25,3 +25,21 @@
   servidor y navegador viven en `lib/shared/`. Las rutas son delgadas: la lógica va en `lib/server/services/`.
 - Código que solo corre en el servidor importa `server-only`; el del navegador, `client-only`; lo compartido va en
   `lib/shared/`.
+
+## Base de datos compartida y migraciones
+
+Todo el equipo (y sus agentes) comparte **la misma base de Supabase**. Por eso:
+
+- **Antes de crear una migración, `git fetch` y mira `select name from schema_migrations`**: usa el siguiente número libre.
+  Ya hubo migraciones con el mismo número aplicadas desde clones distintos.
+- **Sube el archivo de la migración en cuanto la apliques.** Una migración aplicada en la base y ausente del repositorio
+  deja a los demás con un esquema que no pueden reproducir.
+- Nunca edites una migración ya aplicada: crea otra.
+- Las pruebas no deben asumir datos fijos (por ejemplo, el número exacto de habilidades): otras personas los cambian.
+
+## Trabajo en segundo plano
+
+- Lo que deba ocurrir después de un evento (revisar una entrega, avisar a un webhook) se anota en la cola (`jobs`,
+  `webhook_deliveries`) **dentro de la misma transacción** que lo provoca; nunca se confía en `after()` ni en memoria.
+- El worker (`lib/server/services/worker.ts`) es el único que ejecuta la cola. Es seguro correrlo varias veces a la vez.
+- Los pagos del agente pasan por `releaseByAgent` (candado de la base). No envíes transacciones del agente por otro camino.

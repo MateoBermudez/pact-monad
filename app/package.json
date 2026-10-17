@@ -11,7 +11,8 @@
     "lint": "eslint",
     "db:migrate": "node --env-file=.env.local db/migrate.mts",
     "test": "node --test lib/shared/*.test.ts && vitest run",
-    "test:ui": "vitest run"
+    "test:ui": "vitest run",
+    "db:webhooks": "node --env-file=.env.local db/webhooks.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
