@@ -27,6 +27,8 @@ export function pool(): Pool {
   return (globalForDb.pactPool ??= createPool());
 }
 
+export type Queryable = Pick<Pool, "query">;
+
 export async function query<T extends QueryResultRow>(text: string, params?: unknown[]): Promise<T[]> {
   return (await pool().query<T>(text, params)).rows;
 }
