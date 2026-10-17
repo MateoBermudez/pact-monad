@@ -89,3 +89,9 @@ export const providersQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
+
+export const createAgentKeySchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+});
+export type CreateAgentKeyInput = z.infer<typeof createAgentKeySchema>;

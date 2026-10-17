@@ -69,7 +69,10 @@ async function callAi<S extends z.ZodType>(path: string, body: unknown, schema: 
   try {
     res = await fetch(`${serverEnv.aiApiUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(serverEnv.aiApiSecret ? { "x-pact-ai-secret": serverEnv.aiApiSecret } : {}),
+      },
       body: JSON.stringify(body),
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),

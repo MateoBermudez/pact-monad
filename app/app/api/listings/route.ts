@@ -1,8 +1,8 @@
-import { authed, readJson, readQuery } from "@/lib/server/http";
+import { authed, optional, readJson, readQuery } from "@/lib/server/http";
 import { createListing, listListings } from "@/lib/server/services/listings";
 import { createListingSchema, listListingsQuerySchema } from "@/lib/shared/schemas";
 
-export const GET = authed(async ({ request, user }) => ({
+export const GET = optional(async ({ request, user }) => ({
   listings: await listListings(user, readQuery(request, listListingsQuerySchema)),
 }));
 

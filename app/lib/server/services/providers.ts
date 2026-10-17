@@ -9,7 +9,7 @@ export type ProviderSearchResult = ProviderSummaryDto & { score: number };
 
 // Busca proveedores por habilidades y palabras; a igual relevancia, los mejor calificados aparecen primero.
 export async function searchProviders(
-  user: SessionUser,
+  user: SessionUser | null,
   filters: { skills?: string; q?: string; limit: number },
 ): Promise<ProviderSearchResult[]> {
   const skillSlugs = (filters.skills ?? "")
@@ -21,13 +21,13 @@ export async function searchProviders(
 
   const candidates = await query<{ id: string }>(
     `select u.id from users u
-      where u.id <> $1
+      where ($1::uuid is null or u.id <> $1)
         and (u.is_agent or cardinality(u.keywords) > 0 or exists (select 1 from user_skills us where us.user_id = u.id))
         and ($2::text[] = '{}' or exists (
               select 1 from user_skills us join skills s on s.id = us.skill_id
                where us.user_id = u.id and s.slug = any($2::text[])))
       limit 500`,
-    [user.id, skillSlugs],
+    [user?.id ?? null, skillSlugs],
   );
   const summaries = await loadProviderSummaries(candidates.map((row) => row.id));
 

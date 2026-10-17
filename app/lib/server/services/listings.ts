@@ -94,10 +94,10 @@ export function toListingDto(
 }
 
 async function myApplicationsByListing(
-  userId: string,
+  userId: string | undefined,
   listingIds: string[],
 ): Promise<Map<string, { id: string; status: ApplicationStatus }>> {
-  if (listingIds.length === 0) return new Map();
+  if (!userId || listingIds.length === 0) return new Map();
   const rows = await query<{ id: string; listing_id: string; status: ApplicationStatus }>(
     "select id, listing_id, status from applications where provider_id = $1 and listing_id = any($2::uuid[])",
     [userId, listingIds],
@@ -149,14 +149,14 @@ export async function updateListing(user: SessionUser, listingId: string, input:
   return getListing(user, listingId);
 }
 
-export async function getListing(user: SessionUser, listingId: string): Promise<ListingDto> {
+export async function getListing(user: SessionUser | null, listingId: string): Promise<ListingDto> {
   const row = await requireListing(pool(), listingId);
-  const isOwner = row.client_id === user.id;
+  const isOwner = row.client_id === user?.id;
   if (!isOwner && (row.status === "draft" || row.status === "closed")) throw notFound("Solicitud");
 
   const [rules, mine] = await Promise.all([
     loadRules(pool(), row.id, row.rules_version),
-    myApplicationsByListing(user.id, [row.id]),
+    myApplicationsByListing(user?.id, [row.id]),
   ]);
   return toListingDto(row, { rules, myApplication: mine.get(row.id) ?? null });
 }
@@ -164,10 +164,11 @@ export async function getListing(user: SessionUser, listingId: string): Promise<
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, (char) => `\\${char}`);
 
 export async function listListings(
-  user: SessionUser,
+  user: SessionUser | null,
   filters: z.infer<typeof listListingsQuerySchema>,
 ): Promise<ListingDto[]> {
   if (filters.scope === "mine") {
+    if (!user) throw new ApiError(401, "unauthenticated");
     const rows = await query<ListingRow>(`${SELECT_LISTING} where l.client_id = $1 order by l.created_at desc limit $2`, [
       user.id,
       filters.limit,
@@ -179,17 +180,18 @@ export async function listListings(
   const [rows, profile] = await Promise.all([
     query<ListingRow>(
       `${SELECT_LISTING}
-        where l.status = 'open' and l.client_id <> $1
+        where l.status = 'open' and ($1::uuid is null or l.client_id <> $1)
           and ($2::text is null or l.title ilike $2 or l.description ilike $2)
         order by l.created_at desc limit 200`,
-      [user.id, pattern],
+      [user?.id ?? null, pattern],
     ),
-    loadProfile(user.id),
+    user ? loadProfile(user.id) : null,
   ]);
-  const mine = await myApplicationsByListing(user.id, rows.map((row) => row.id));
+  const mine = await myApplicationsByListing(user?.id, rows.map((row) => row.id));
 
   const listings = rows.map((row) => {
-    const match = scoreListingForProvider(
+    // Sin sesión no hay perfil con el que comparar: se listan por fecha, sin puntaje.
+    const match = !profile ? null : scoreListingForProvider(
       {
         title: row.title,
         category: row.category,
@@ -203,7 +205,7 @@ export async function listListings(
     return toListingDto(row, { match, myApplication: mine.get(row.id) ?? null });
   });
 
-  if (filters.scope === "recommended") listings.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
+  if (filters.scope === "recommended" && profile) listings.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
   return listings.slice(0, filters.limit);
 }
 

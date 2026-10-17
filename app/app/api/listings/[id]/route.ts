@@ -1,8 +1,8 @@
-import { authed, parseId, readJson } from "@/lib/server/http";
+import { authed, optional, parseId, readJson } from "@/lib/server/http";
 import { getListing, updateListing } from "@/lib/server/services/listings";
 import { updateListingSchema } from "@/lib/shared/schemas";
 
-export const GET = authed<{ id: string }>(async ({ params, user }) => ({
+export const GET = optional<{ id: string }>(async ({ params, user }) => ({
   listing: await getListing(user, parseId(params.id)),
 }));
 
