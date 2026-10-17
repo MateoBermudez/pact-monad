@@ -43,6 +43,20 @@ El cliente decide cuánto confía en el agente. **El límite se hace cumplir aqu
 - **Sin `receive`/`fallback`.** El contrato solo recibe MON por `createAgreement`.
 - **Errores personalizados y eventos** en cada transición, para que el frontend, el indexador y el explorer reconstruyan el historial.
 
+## Despliegue actual (Monad Testnet)
+
+| | |
+|---|---|
+| Contrato | [`0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec`](https://testnet.monadscan.com/address/0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec) |
+| Bloque de despliegue | `71903631` |
+| Agente de IA | `0x7A9E29a2E37590a7242930AE8f259e8562800825` |
+| Tope de pago autónomo | 5.000.000 MON por cliente |
+| Código fuente | verificado en Sourcify (`exact_match`) |
+
+Los datos completos están en [`deployments/monad-testnet.json`](deployments/monad-testnet.json). Para la app:
+`NEXT_PUBLIC_CONTRACT_ADDRESS=0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec`, `CONTRACT_DEPLOY_BLOCK=71903631`,
+`NEXT_PUBLIC_CHAIN_ID=10143`. Antes de esto se ensayó el ciclo completo en la red real con otro contrato que ya no se usa.
+
 ## Comandos
 
 ```sh

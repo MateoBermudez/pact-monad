@@ -1,0 +1,15 @@
+{
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "contract": "PactEscrow",
+  "address": "0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec",
+  "deployBlock": 71903631,
+  "deployTxHash": "0xa79e7155e7622c81896bb6d2c031a0a816a71c795d6e840b15fb45b8a3a88b87",
+  "deployer": "0x746A0a3D4F5a9b13Ce203246Be500043927eC66D",
+  "agent": "0x7A9E29a2E37590a7242930AE8f259e8562800825",
+  "maxAutoReleaseMon": "5000000",
+  "deployedOn": "2026-10-17",
+  "explorer": "https://testnet.monadscan.com/address/0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec",
+  "sourceVerification": "Sourcify (exact_match) https://sourcify-api-monad.blockvision.org/verify-ui/jobs/641eaf41-63dc-4c99-9760-cc55bbb2ae78",
+  "notes": "Despliegue definitivo para la demo. Un contrato de ensayo anterior (0xbD3EfE0EF503F3E8e57385Cac6b04aea548B3a22) se usó para probar el ciclo completo en la red real y no debe usarse."
+}
