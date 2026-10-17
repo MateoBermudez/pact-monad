@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Header } from "@/components/Shell";
 
@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   connected: false,
   logout: vi.fn(),
   replace: vi.fn(),
+  setConnected: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,13 +22,14 @@ vi.mock("next/link", () => ({
   ),
 }));
 vi.mock("@/components/NotificationBell", () => ({ NotificationBell: () => <span>campanita</span> }));
+vi.mock("@/components/ProfileAvatar", () => ({ CurrentUserAvatar: () => <span>foto</span> }));
 vi.mock("@/lib/client/use-hydrated", () => ({ useHydrated: () => true }));
 vi.mock("@/lib/client/pact-context", () => ({
   short: (value: string) => value,
   usePact: () => ({
     address: "0xabc",
     connected: state.connected,
-    setConnected: vi.fn(),
+    setConnected: state.setConnected,
     wrongNetwork: false,
     switchNetwork: vi.fn(),
     balance: 0,
@@ -43,6 +45,7 @@ afterEach(() => {
   state.connected = false;
   state.logout.mockReset();
   state.replace.mockReset();
+  state.setConnected.mockReset();
 });
 
 describe("encabezado", () => {
@@ -62,12 +65,12 @@ describe("encabezado", () => {
     expect(screen.getByLabelText("Mi perfil")).toBeInTheDocument();
   });
 
-  it("permite cerrar sesión y vuelve al acceso", async () => {
-    state.logout.mockResolvedValue(undefined);
+  it("ofrece una sola salida dentro de la wallet", () => {
+    state.connected = true;
     render(<Header />);
+    expect(screen.getAllByRole("button", { name: "Cerrar sesión" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
-    await waitFor(() => expect(state.replace).toHaveBeenCalledWith("/iniciar-sesion"));
-    expect(state.logout).toHaveBeenCalledTimes(1);
+    expect(state.setConnected).toHaveBeenCalledWith(false);
   });
 
   it("sin sesión no ofrece cerrar sesión", () => {
