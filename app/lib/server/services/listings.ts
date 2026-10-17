@@ -11,7 +11,7 @@ import { scoreListingForProvider } from "@/lib/shared/matching";
 import { trimMon } from "@/lib/shared/money";
 import type { CreateListingInput, SaveRulesInput, UpdateListingInput } from "@/lib/shared/schemas";
 import { listListingsQuerySchema } from "@/lib/shared/schemas";
-import { normalizeKeywords } from "@/lib/shared/keywords";
+import { deriveKeywords, normalizeKeywords } from "@/lib/shared/keywords";
 import type { z } from "zod";
 
 export const DEFAULT_TITLE = "Solicitud sin título";
@@ -236,9 +236,10 @@ export async function publishListing(user: SessionUser, listingId: string): Prom
     const rules = await loadRules(client, listingId, row.rules_version);
     if (rules.length === 0) throw new ApiError(422, "missing_rules", "Revisa y confirma las reglas de aceptación antes de publicar");
 
+    const keywords = row.keywords.length > 0 ? row.keywords : normalizeKeywords(deriveKeywords(`${row.title} ${row.description ?? ""}`));
     await client.query(
-      "update listings set status = 'open', rules_hash = $2, rules_confirmed_at = now() where id = $1",
-      [listingId, computeRulesHash(listingId, row.rules_version, rules)],
+      "update listings set status = 'open', rules_hash = $2, rules_confirmed_at = now(), keywords = $3::text[] where id = $1",
+      [listingId, computeRulesHash(listingId, row.rules_version, rules), keywords],
     );
 
     await notifyMatchingProviders(client, {
@@ -247,7 +248,7 @@ export async function publishListing(user: SessionUser, listingId: string): Prom
       title: row.title,
       description: row.description,
       category: row.category,
-      keywords: row.keywords,
+      keywords,
       budgetMon: row.budget_mon,
       clientScore: row.client_score,
       createdAt: row.created_at,
