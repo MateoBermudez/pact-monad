@@ -1,15 +1,19 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ShieldCheck, Wallet } from "lucide-react";
 import { usePact } from "@/lib/client/pact-context";
 
 export default function Connect() {
-  const { signIn, signedIn, loading } = usePact();
+  const { signIn, signedIn, connected, loading } = usePact();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    // Con la wallet ya conectada y verificada no hay nada que hacer aquí.
+    if (!loading && signedIn && connected) router.replace("/dashboard");
+  }, [loading, signedIn, connected, router]);
   if (loading) return <p role="status">Cargando tu sesión…</p>;
   if (!signedIn)
     return (
