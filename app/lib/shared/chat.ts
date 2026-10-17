@@ -36,6 +36,8 @@ export type ProposalDto = {
   deltaMon: string;
   newDeadline: string | null;
   expiresAt: string;
+  // Términos exactos que se firman y se ejecutan (no incluyen ninguna firma).
+  terms: AmendmentTerms;
   status: ProposalStatus;
   createdAt: string;
   resolvedAt: string | null;

@@ -20,6 +20,7 @@ import { api, jsonRequest } from "@/lib/client/api";
 import { sendEscrowAction } from "@/lib/client/escrow-wallet";
 import { usePact } from "@/lib/client/pact-context";
 import { subscribeToChanges } from "@/lib/client/realtime";
+import { AgreementChat } from "@/components/AgreementChat";
 import { FileUpload, FileLink } from "@/components/FileUpload";
 import type { FileDto } from "@/lib/shared/files";
 import { fileReference, referencedFileId } from "@/lib/shared/file-reference";
@@ -201,6 +202,12 @@ export default function PactDetail({ id }: { id: string }) {
           </a>
         )}
       </section>
+      <AgreementChat
+        agreement={agreement}
+        onChanged={async () => {
+          await Promise.all([load(), refresh()]);
+        }}
+      />
       {agreement.evidenceUrl && (
         <section className="card space-y-3">
           <h2 className="flex items-center gap-2 font-bold">
