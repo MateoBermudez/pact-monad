@@ -385,7 +385,7 @@ function rulesHash(listingId: string, version: number, rules: DemoRule[]): strin
   return keccak256(toUtf8Bytes(canonical));
 }
 
-const toWei = (mon: number): string => (BigInt(Math.round(mon * 1000)) * 10n ** 15n).toString();
+const toWei = (mon: number): string => (BigInt(Math.round(mon * 1000)) * BigInt(10 ** 15)).toString();
 const emailOf = (username: string) => `${username}@${DEMO_DOMAIN}`;
 
 const connectionString = process.env.DATABASE_URL_SESSION ?? process.env.DATABASE_URL;
