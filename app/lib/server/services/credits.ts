@@ -56,6 +56,7 @@ export async function withCredits<T>(userId: string, action: CreditAction, run: 
 
 // Acredita una compra comprobando en la cadena que el pago llegó a la tesorería desde la wallet del usuario.
 export async function purchaseCredits(user: SessionUser, txHash: string): Promise<{ credits: number; balance: number }> {
+  const senderWallet = requireWallet(user);
   if (!serverEnv.treasuryAddress) {
     throw new ApiError(503, "treasury_not_configured", "La tesorería de PACT no está configurada");
   }
@@ -67,7 +68,7 @@ export async function purchaseCredits(user: SessionUser, txHash: string): Promis
   if (tx.to?.toLowerCase() !== serverEnv.treasuryAddress) {
     throw new ApiError(422, "wrong_recipient", "El pago no fue a la tesorería de PACT");
   }
-  if (tx.from.toLowerCase() !== requireWallet(user)) {
+  if (tx.from.toLowerCase() !== senderWallet) {
     throw new ApiError(403, "wrong_sender", "El pago salió de una wallet distinta a la de tu sesión");
   }
 
