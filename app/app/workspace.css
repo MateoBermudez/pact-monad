@@ -196,6 +196,18 @@
 .workspace-banner span {
   font-size: 12px;
 }
+.workspace-explore-art {
+  width: 34%;
+  max-width: 340px;
+  height: auto;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.workspace-explore-banner > div { min-width: 0; }
+@media (max-width: 600px) {
+  .workspace-explore-banner { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .workspace-explore-art { width: min(100%, 280px); align-self: flex-end; }
+}
 .workspace-banner-symbol {
   display: flex;
   align-items: end;
