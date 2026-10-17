@@ -88,7 +88,10 @@ Todas devuelven JSON. Errores: `{ "error": código, "message": texto }`. **Sesi�
 | `GET /api/credits` · `POST /api/credits/purchase` | sí | Créditos de IA / acreditar un pago en MON hecho a la tesorería |
 | `GET /api/settings/ai` | sí | Límite de pago autónomo de la IA (el valor real vive en el contrato) |
 | `GET/POST /api/agent-keys` · `DELETE /api/agent-keys/[id]` | sí (wallet) | Claves de API de agentes |
+| `GET/POST /api/webhooks` · `PATCH/DELETE /api/webhooks/[id]` | sí | Webhooks salientes: registrar una URL (el secreto se muestra una sola vez), filtrar eventos, activar o borrar |
+| `POST /api/webhooks/[id]/test` · `/rotate-secret` · `GET …/deliveries` | sí | Enviar un ping / rotar el secreto / ver los últimos envíos y por qué fallaron |
 | `POST /api/chain/sync` | sí | Fuerza una sincronización con la cadena |
+| `POST/GET /api/internal/worker` | secreto | Un paso del worker: sincroniza, ejecuta tareas y envía webhooks. Lo llama Supabase, no las personas |
 
 ### Flujo de una solicitud
 
@@ -106,6 +109,59 @@ Todas devuelven JSON. Errores: `{ "error": código, "message": texto }`. **Sesi�
 El indexador (`lib/server/chain/indexer.ts`) lee los eventos de `PactEscrow` en tramos de 100 bloques (límite del RPC de
 Monad) y los copia a Supabase de forma idempotente. Varias instancias pueden correr a la vez: cada tramo se reserva con una
 escritura condicional sobre `last_block`. `/api/stream` consulta una huella barata cada 2 s y avisa al navegador cuando cambia.
+
+## Webhooks: avisar a quien le toca actuar
+
+Las personas y, sobre todo, los **agentes** registran una URL (`POST /api/webhooks`) y reciben un aviso firmado cuando algo
+les toca, en lugar de estar preguntando. Cada aviso dice **qué sigue y quién lo hace**:
+
+```json
+{
+  "id": "2f1c…", "type": "agreement.delivered", "createdAt": "2026-10-17T18:30:00Z", "recipientRole": "client",
+  "data": { "agreementId": "…", "chainAgreementId": "7", "contractAddress": "0x…", "amountMon": "10",
+            "status": "Delivered", "evidenceUrl": "https://…", "providerNote": "Entrego PNG y SVG" },
+  "nextAction": { "actor": "client", "action": "review_delivery", "youAct": true,
+                  "hint": "Revisa con POST /api/agreements/{id}/review, o aprueba on-chain con approveAndRelease" }
+}
+```
+
+Un agente solo reacciona cuando `nextAction.youAct` es `true`. Eventos: `application.received` · `application.selected` ·
+`application.rejected` · `agreement.created` · `agreement.accepted` · `agreement.delivered` · `agreement.approved` ·
+`agreement.cancelled` · `decision.created` · `ping`. Se pueden filtrar al registrar el webhook (vacío = todos).
+
+**Verifica siempre la firma.** Cabeceras: `X-Pact-Signature: t=<segundos>,v1=<hmac>`, `X-Pact-Event`, `X-Pact-Delivery`.
+La firma es HMAC-SHA256 de `"<t>.<cuerpo exacto>"` con el secreto del webhook. Rechaza mensajes con `t` de hace más de
+5 minutos para evitar repeticiones. La verificación lista para copiar está en `lib/shared/webhook-signature.ts`:
+
+```ts
+import { verifyWebhook } from "./webhook-signature"; // Web Crypto: funciona en Node, Deno, Bun y navegadores
+const valid = await verifyWebhook(secret, request.headers.get("x-pact-signature"), rawBody);
+```
+
+**Entrega y reintentos.** Responde con 2xx en menos de 10 s. Si no, se reintenta a los 30 s, 2 min, 10 min, 1 h y 6 h (6
+intentos en total) y luego se da por fallido; tras 20 fallos seguidos el webhook se desactiva (se reactiva con
+`PATCH {"active": true}`). Es **al menos una vez**: usa el `id` del aviso para ignorar duplicados. Los avisos de un mismo
+destinatario salen en orden de creación, pero los reintentos pueden reordenar: confía en `createdAt` y en el estado.
+
+**Seguridad de las URLs.** Solo `https` y puerto 443; se rechazan `localhost`, redes privadas, la red local, el servicio de
+metadatos de la nube (`169.254.169.254`) y dominios que resuelvan a ellas. Se valida al registrar, otra vez antes de
+cada envío y, además, al abrir la conexión (contra DNS que cambie de respuesta). No se siguen redirecciones.
+
+## Trabajo en segundo plano (cola + worker)
+
+Nada depende de que alguien tenga la app abierta. Cuando el indexador ve un evento, anota **en la misma transacción** los
+avisos de webhook y, si es una entrega, la tarea "revisar con la IA" (tablas `webhook_deliveries` y `jobs`). Un worker
+las reclama con `FOR UPDATE SKIP LOCKED` (varias instancias a la vez no duplican) y las ejecuta:
+
+- Las tareas se reintentan con espera creciente (15 s, 30 s, 1 min…, máx. 5 intentos) si falla la IA o la red; los
+  errores permanentes (acuerdo sin reglas) no se reintentan.
+- Reclamar es un arrendamiento: si el worker muere a la mitad, la tarea vuelve sola cuando vence el plazo.
+- Los eventos históricos (más de 10 min más viejos que el último bloque) se indexan pero no generan avisos ni
+  revisiones, así reindexar desde cero no inunda a los agentes con el pasado.
+
+El worker corre en `POST /api/internal/worker` (exige `x-pact-secret` = `INTERNAL_WEBHOOK_SECRET`, o el `CRON_SECRET` de
+Vercel por `GET`). Tras cada sincronización con eventos nuevos la propia app lo dispara en segundo plano para que todo salga
+al instante; el respaldo durable es quien llame a ese endpoint.
 
 ## Base de datos
 

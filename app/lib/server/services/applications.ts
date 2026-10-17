@@ -3,6 +3,7 @@ import { pool, query, withTransaction } from "@/lib/server/db";
 import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
 import { getListing, requireListing, requireOwnListing } from "@/lib/server/services/listings";
 import { loadProviderSummaries } from "@/lib/server/services/profiles";
+import { emitWebhook } from "@/lib/server/services/webhooks";
 import type { SessionUser } from "@/lib/shared/auth";
 import type { ApplicationDto, ApplicationStatus, CreateAgreementParams, ListingStatus, SelectionResultDto } from "@/lib/shared/listings";
 import { scoreApplicant } from "@/lib/shared/matching";
@@ -53,12 +54,21 @@ export async function applyToListing(user: SessionUser, listingId: string, input
   if (listing.client_id === user.id) throw forbidden("No puedes postularte a tu propia solicitud");
   if (listing.status !== "open") throw conflict("La solicitud ya no recibe postulaciones");
 
-  const [row] = await query<ApplicationRow>(
-    `insert into applications (listing_id, provider_id, message, price_mon, days)
-     values ($1, $2, $3, $4, $5)
-     returning id, listing_id, provider_id, message, price_mon::text as price_mon, days, status, created_at`,
-    [listingId, user.id, input.message, input.priceMon?.toString() ?? null, input.days ?? null],
-  );
+  const row = await withTransaction(async (client) => {
+    const { rows } = await client.query<ApplicationRow>(
+      `insert into applications (listing_id, provider_id, message, price_mon, days)
+       values ($1, $2, $3, $4, $5)
+       returning id, listing_id, provider_id, message, price_mon::text as price_mon, days, status, created_at`,
+      [listingId, user.id, input.message, input.priceMon?.toString() ?? null, input.days ?? null],
+    );
+    await emitWebhook(client, {
+      type: "application.received",
+      recipients: [{ userId: listing.client_id, role: "client" }],
+      data: { listingId, applicationId: rows[0].id, providerId: user.id, priceMon: input.priceMon?.toString() ?? null },
+      dedupe: rows[0].id,
+    });
+    return rows[0];
+  });
   return (await toDtos([row]))[0];
 }
 
@@ -141,7 +151,15 @@ export async function actOnApplication(
   } else {
     await requireOwnListing(pool(), user.id, application.listing_id);
     if (action === "shortlist") await setStatus(applicationId, ["submitted"], "shortlisted");
-    if (action === "reject") await setStatus(applicationId, ["submitted", "shortlisted"], "rejected");
+    if (action === "reject") {
+      await setStatus(applicationId, ["submitted", "shortlisted"], "rejected");
+      await emitWebhook(pool(), {
+        type: "application.rejected",
+        recipients: [{ userId: application.provider_id, role: "provider" }],
+        data: { listingId: application.listing_id, applicationId },
+        dedupe: applicationId,
+      });
+    }
     if (action === "select") return select(user, applicationId);
   }
 
@@ -163,10 +181,26 @@ async function select(user: SessionUser, applicationId: string): Promise<ActionO
     if (!listing.rules_hash || listing.deadline_days === null) throw new ApiError(422, "unpublished", "La solicitud no está lista");
 
     await client.query("update applications set status = 'selected' where id = $1", [applicationId]);
-    await client.query(
-      "update applications set status = 'rejected' where listing_id = $1 and id <> $2 and status in ('submitted', 'shortlisted')",
+    await emitWebhook(client, {
+      type: "application.selected",
+      recipients: [{ userId: application.provider_id, role: "provider" }],
+      data: { listingId: listing.id, applicationId },
+      dedupe: applicationId,
+    });
+    const { rows: discarded } = await client.query<{ id: string; provider_id: string }>(
+      `update applications set status = 'rejected'
+        where listing_id = $1 and id <> $2 and status in ('submitted', 'shortlisted')
+        returning id, provider_id`,
       [listing.id, applicationId],
     );
+    for (const other of discarded) {
+      await emitWebhook(client, {
+        type: "application.rejected",
+        recipients: [{ userId: other.provider_id, role: "provider" }],
+        data: { listingId: listing.id, applicationId: other.id },
+        dedupe: other.id,
+      });
+    }
     await client.query("update listings set status = 'awarded', awarded_application_id = $2 where id = $1", [
       listing.id,
       applicationId,
