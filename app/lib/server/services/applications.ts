@@ -1,11 +1,21 @@
 import "server-only";
-import { pool, query, withTransaction } from "@/lib/server/db";
+import { pool, query, withTransaction, type Queryable } from "@/lib/server/db";
 import { ApiError, conflict, forbidden, notFound, requireRole, requireWallet } from "@/lib/server/http";
+import { enqueueScreeningJob } from "@/lib/server/services/job-queue";
 import { getListing, requireListing, requireOwnListing } from "@/lib/server/services/listings";
+import { createNotification } from "@/lib/server/services/notifications";
 import { loadProviderSummaries } from "@/lib/server/services/profiles";
 import { emitWebhook } from "@/lib/server/services/webhooks";
 import type { SessionUser } from "@/lib/shared/auth";
-import type { ApplicationDto, ApplicationStatus, CreateAgreementParams, ListingStatus, SelectionResultDto } from "@/lib/shared/listings";
+import type {
+  ApplicationDto,
+  ApplicationStatus,
+  CreateAgreementParams,
+  ListingStatus,
+  ScreeningDto,
+  ScreeningVerdict,
+  SelectionResultDto,
+} from "@/lib/shared/listings";
 import { scoreApplicant } from "@/lib/shared/matching";
 import { trimMon } from "@/lib/shared/money";
 import type { ApplicationAction, ApplyInput } from "@/lib/shared/schemas";
@@ -19,11 +29,30 @@ type ApplicationRow = {
   days: number | null;
   status: ApplicationStatus;
   created_at: Date;
+  ai_verdict?: ScreeningVerdict | null;
+  ai_score?: number | null;
+  ai_summary?: string | null;
+  ai_strengths?: string[];
+  ai_concerns?: string[];
+  ai_evaluated_at?: Date | null;
 };
 
 const SELECT_APPLICATION = `
-  select id, listing_id, provider_id, message, price_mon::text as price_mon, days, status, created_at
+  select id, listing_id, provider_id, message, price_mon::text as price_mon, days, status, created_at,
+         ai_verdict, ai_score, ai_summary, ai_strengths, ai_concerns, ai_evaluated_at
     from applications`;
+
+const toScreening = (row: ApplicationRow): ScreeningDto | null =>
+  row.ai_verdict && row.ai_evaluated_at && row.ai_score != null
+    ? {
+        verdict: row.ai_verdict,
+        score: row.ai_score,
+        summary: row.ai_summary ?? "",
+        strengths: row.ai_strengths ?? [],
+        concerns: row.ai_concerns ?? [],
+        evaluatedAt: row.ai_evaluated_at.toISOString(),
+      }
+    : null;
 
 export type MyApplicationDto = ApplicationDto & { listingTitle: string; listingStatus: ListingStatus };
 
@@ -44,6 +73,7 @@ async function toDtos(rows: ApplicationRow[]): Promise<ApplicationDto[]> {
         createdAt: row.created_at.toISOString(),
         provider,
         match: null,
+        screening: toScreening(row),
       },
     ];
   });
@@ -62,6 +92,20 @@ export async function applyToListing(user: SessionUser, listingId: string, input
        returning id, listing_id, provider_id, message, price_mon::text as price_mon, days, status, created_at`,
       [listingId, user.id, input.message, input.priceMon?.toString() ?? null, input.days ?? null],
     );
+    await enqueueScreeningJob(client, rows[0].id);
+    const { rows: names } = await client.query<{ name: string }>(
+      "select coalesce(display_name, username, 'Alguien') as name from users where id = $1",
+      [user.id],
+    );
+    await createNotification(client, {
+      userId: listing.client_id,
+      type: "application.received",
+      listingId,
+      title: `${names[0]?.name ?? "Alguien"} se postuló a «${listing.title}»`,
+      body: input.message.replace(/\s+/g, " ").trim().slice(0, 140),
+      data: { applicationId: rows[0].id, priceMon: input.priceMon?.toString() ?? null },
+      dedupe: rows[0].id,
+    });
     await emitWebhook(client, {
       type: "application.received",
       recipients: [{ userId: listing.client_id, role: "client" }],
@@ -70,7 +114,7 @@ export async function applyToListing(user: SessionUser, listingId: string, input
     });
     return rows[0];
   });
-  return (await toDtos([row]))[0];
+  return { ...(await toDtos([row]))[0], screening: null };
 }
 
 // Postulaciones de una solicitud, ordenadas por encaje: calificación, habilidades, experiencia, portafolio y precio.
@@ -112,6 +156,7 @@ export async function listMyApplications(user: SessionUser): Promise<MyApplicati
   const byId = new Map(rows.map((row) => [row.id, row]));
   return dtos.map((dto) => ({
     ...dto,
+    screening: null,
     listingTitle: byId.get(dto.id)?.listing_title ?? "",
     listingStatus: byId.get(dto.id)?.listing_status ?? "closed",
   }));
@@ -126,6 +171,36 @@ function onChainDescription(title: string, description: string | null): string {
   let text = full;
   while (encoder.encode(text).length > MAX_ON_CHAIN_DESCRIPTION_BYTES) text = text.slice(0, -1);
   return text;
+}
+
+const OUTCOME_TEXT = {
+  "application.selected": {
+    title: (listing: string) => `Te eligieron para «${listing}»`,
+    body: "Cuando el cliente bloquee los fondos verás el acuerdo en Mis acuerdos.",
+  },
+  "application.rejected": {
+    title: (listing: string) => `No te seleccionaron en «${listing}»`,
+    body: "Gracias por postularte. Hay más oportunidades esperándote en Explorar.",
+  },
+} as const;
+
+async function notifyOutcome(
+  db: Queryable,
+  type: keyof typeof OUTCOME_TEXT,
+  listingId: string,
+  providerId: string,
+  applicationId: string,
+): Promise<void> {
+  const { rows } = await db.query<{ title: string }>("select title from listings where id = $1", [listingId]);
+  await createNotification(db, {
+    userId: providerId,
+    type,
+    listingId,
+    title: OUTCOME_TEXT[type].title(rows[0]?.title ?? "la solicitud"),
+    body: OUTCOME_TEXT[type].body,
+    data: { applicationId },
+    dedupe: applicationId,
+  });
 }
 
 type ActionOutcome = { application: ApplicationDto; selection: SelectionResultDto | null };
@@ -160,12 +235,14 @@ export async function actOnApplication(
         data: { listingId: application.listing_id, applicationId },
         dedupe: applicationId,
       });
+      await notifyOutcome(pool(), "application.rejected", application.listing_id, application.provider_id, applicationId);
     }
     if (action === "select") return select(user, applicationId);
   }
 
   const [updated] = await query<ApplicationRow>(`${SELECT_APPLICATION} where id = $1`, [applicationId]);
-  return { application: (await toDtos([updated]))[0], selection: null };
+  const dto = (await toDtos([updated]))[0];
+  return { application: action === "withdraw" ? { ...dto, screening: null } : dto, selection: null };
 }
 
 // Elegir proveedor adjudica la solicitud y descarta al resto; después el cliente firma createAgreement con estos parámetros.
@@ -189,6 +266,7 @@ async function select(user: SessionUser, applicationId: string): Promise<ActionO
       data: { listingId: listing.id, applicationId },
       dedupe: applicationId,
     });
+    await notifyOutcome(client, "application.selected", listing.id, application.provider_id, applicationId);
     const { rows: discarded } = await client.query<{ id: string; provider_id: string }>(
       `update applications set status = 'rejected'
         where listing_id = $1 and id <> $2 and status in ('submitted', 'shortlisted')
@@ -202,6 +280,7 @@ async function select(user: SessionUser, applicationId: string): Promise<ActionO
         data: { listingId: listing.id, applicationId: other.id },
         dedupe: other.id,
       });
+      await notifyOutcome(client, "application.rejected", listing.id, other.provider_id, other.id);
     }
     await client.query("update listings set status = 'awarded', awarded_application_id = $2 where id = $1", [
       listing.id,

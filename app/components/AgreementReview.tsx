@@ -13,7 +13,13 @@ import {
   Wand2,
 } from "lucide-react";
 import { IllustrationContractIdea } from "./Illustrations";
-import { providerError, reviewSchema } from "@/lib/shared/agreement-review";
+import {
+  parseRuleLines,
+  providerError,
+  reviewListingSchema,
+  reviewSchema,
+} from "@/lib/shared/agreement-review";
+import { splitKeywords } from "@/lib/shared/keywords";
 import type { ReactNode } from "react";
 
 type Props = {
@@ -23,12 +29,17 @@ type Props = {
   days: string;
   provider: string;
   client?: string;
+  listing?: boolean;
+  keywords?: string;
+  rules?: string;
   manual: boolean;
   onTitle: (v: string) => void;
   onDescription: (v: string) => void;
   onAmount: (v: string) => void;
   onDays: (v: string) => void;
   onProvider: (v: string) => void;
+  onKeywords?: (v: string) => void;
+  onRules?: (v: string) => void;
   onBack: () => void;
   onNext: () => void;
 };
@@ -54,12 +65,15 @@ function Field({
 }
 
 export function AgreementReview(p: Props) {
-  const walletError = providerError(p.provider, p.client);
+  const listing = !!p.listing;
+  const walletError = listing ? null : providerError(p.provider, p.client);
+  const rulesCheck = parseRuleLines(p.rules ?? "");
+  const keywordList = splitKeywords(p.keywords ?? "");
   const amountOk = reviewSchema.shape.amount.safeParse(p.amount).success;
   const daysOk = reviewSchema.shape.days.safeParse(p.days).success;
-  const valid =
-    reviewSchema.safeParse({ ...p, description: p.description }).success &&
-    !walletError;
+  const valid = listing
+    ? reviewListingSchema.safeParse({ ...p, description: p.description }).success && !rulesCheck.error
+    : reviewSchema.safeParse({ ...p, description: p.description }).success && !walletError;
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[1.65fr_1fr]">
       <form
@@ -95,8 +109,8 @@ export function AgreementReview(p: Props) {
         <Field label="Descripción y entregables" id="review-description">
           <textarea
             id="review-description"
-            className={`${input} min-h-28 resize-y`}
-            rows={3}
+            className={`${input} resize-y ${listing ? "min-h-72" : "min-h-28"}`}
+            rows={listing ? 14 : 3}
             value={p.description}
             onChange={(e) => p.onDescription(e.target.value)}
             placeholder="Describe el trabajo, los entregables y sus condiciones"
@@ -151,6 +165,48 @@ export function AgreementReview(p: Props) {
             )}
           </Field>
         </div>
+        {listing && (
+          <>
+            <Field label="Palabras clave (separadas por comas)" id="review-keywords">
+              <input
+                id="review-keywords"
+                className={input}
+                value={p.keywords ?? ""}
+                onChange={(e) => p.onKeywords?.(e.target.value)}
+                placeholder="backend, api rest, node.js, postgresql"
+                autoComplete="off"
+              />
+            </Field>
+            <p className="-mt-3 text-xs text-muted-foreground">
+              Con ellas avisamos primero a quienes tienen esas habilidades. Si las dejas vacías, las tomamos de tu texto.
+            </p>
+            {keywordList.length > 0 && (
+              <ul aria-label="Palabras clave" className="-mt-2 flex flex-wrap gap-2">
+                {keywordList.map((keyword) => (
+                  <li key={keyword} className="rounded-full border border-ink/30 bg-primary/25 px-3 py-1 text-xs font-medium">
+                    {keyword}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Field label="Condiciones de aceptación (una por línea)" id="review-rules">
+              <textarea
+                id="review-rules"
+                className={`${input} min-h-28 resize-y`}
+                rows={5}
+                value={p.rules ?? ""}
+                onChange={(e) => p.onRules?.(e.target.value)}
+                placeholder="Entrega los archivos editables y exportados…"
+                aria-invalid={!!rulesCheck.error}
+              />
+            </Field>
+            <p className={`-mt-3 text-xs ${rulesCheck.error ? "text-destructive" : "text-muted-foreground"}`}>
+              {rulesCheck.error ??
+                "Con ellas se revisa la entrega. Si las dejas vacías, usamos una condición general. No se pueden editar una vez publicada."}
+            </p>
+          </>
+        )}
+        {!listing && (
         <div className="space-y-2">
           <Field label="Wallet del proveedor" id="review-provider">
             <input
@@ -181,6 +237,7 @@ export function AgreementReview(p: Props) {
             Revisa que la dirección sea correcta antes de continuar.
           </div>
         </div>
+        )}
         <div className="flex flex-col gap-4 border-t border-ink/15 pt-4 sm:flex-row sm:items-end sm:justify-between">
           <button
             type="button"
@@ -193,6 +250,7 @@ export function AgreementReview(p: Props) {
           <div className="space-y-2 sm:text-right">
             <p aria-live="polite" className="text-xs text-muted-foreground">
               {walletError ??
+                rulesCheck.error ??
                 (!valid
                   ? "Completa los campos requeridos para continuar."
                   : "Todo listo para revisar y continuar.")}
@@ -244,7 +302,7 @@ export function AgreementReview(p: Props) {
                 },
                 {
                   icon: Database,
-                  label: "Monto a bloquear",
+                  label: listing ? "Presupuesto" : "Monto a bloquear",
                   value: amountOk
                     ? `${p.amount.replace(",", ".")} MON`
                     : "Pendiente",
@@ -258,14 +316,23 @@ export function AgreementReview(p: Props) {
                     : "Pendiente",
                   small: false,
                 },
-                {
-                  icon: UserRound,
-                  label: "Proveedor",
-                  value: !walletError
-                    ? `${p.provider.trim().slice(0, 6)}…${p.provider.trim().slice(-4)}`
-                    : "Pendiente de completar",
-                  small: true,
-                },
+                listing
+                  ? {
+                      icon: UserRound,
+                      label: "Quién lo verá",
+                      value: keywordList.length
+                        ? `Prestadores con tus ${keywordList.length} palabras clave`
+                        : "Prestadores con habilidades afines",
+                      small: true,
+                    }
+                  : {
+                      icon: UserRound,
+                      label: "Proveedor",
+                      value: !walletError
+                        ? `${p.provider.trim().slice(0, 6)}…${p.provider.trim().slice(-4)}`
+                        : "Pendiente de completar",
+                      small: true,
+                    },
               ].map(({ icon: Icon, label, value, small }, i) => (
                 <div
                   key={label}
@@ -297,17 +364,29 @@ export function AgreementReview(p: Props) {
           </span>
           <div>
             <h3 className="font-display text-lg font-bold">
-              Tú apruebas el pago
+              {listing ? "Tú eliges con quién trabajar" : "Tú apruebas el pago"}
             </h3>
             <p className="mt-1 text-sm text-ink-foreground/85">
-              La IA propone las condiciones.
-              <br />
-              Tú las revisas y confirmas.
+              {listing ? (
+                <>
+                  Recibes propuestas, y tú o tu IA eligen.
+                  <br />
+                  Los fondos se bloquean cuando firmas.
+                </>
+              ) : (
+                <>
+                  La IA propone las condiciones.
+                  <br />
+                  Tú las revisas y confirmas.
+                </>
+              )}
             </p>
           </div>
         </aside>
         <p className="text-xs text-muted-foreground">
-          Todavía no se bloquearán fondos.
+          {listing
+            ? "Publicar no bloquea fondos ni te pide wallet."
+            : "Todavía no se bloquearán fondos."}
         </p>
       </div>
     </div>

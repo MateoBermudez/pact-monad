@@ -14,7 +14,7 @@ async function Content({ searchParams }: Props) {
 
 export default function Page(props: Props) {
   return (
-    <Suspense fallback={<p>Cargando acuerdo…</p>}>
+    <Suspense fallback={<p>Cargando…</p>}>
       <Content {...props} />
     </Suspense>
   );

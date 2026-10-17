@@ -31,6 +31,18 @@ export type ListingDto = {
   myApplication: { id: string; status: ApplicationStatus } | null;
 };
 
+export type ScreeningVerdict = "accept" | "review" | "reject";
+export type ScreeningMode = "off" | "assist" | "auto";
+
+export type ScreeningDto = {
+  verdict: ScreeningVerdict;
+  score: number;
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  evaluatedAt: string;
+};
+
 export type ApplicationDto = {
   id: string;
   listingId: string;
@@ -42,6 +54,7 @@ export type ApplicationDto = {
   createdAt: string;
   provider: ProviderSummaryDto;
   match: { breakdown: MatchBreakdown; reasons: string[] } | null;
+  screening: ScreeningDto | null;
 };
 
 export type StructureSource = "ai" | "fallback";

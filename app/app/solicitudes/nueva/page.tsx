@@ -1,9 +1,5 @@
-import { NewListing as View } from "@/components/pages/Listings";
-import { ConnectGate } from "@/components/Shell";
+import { redirect } from "next/navigation";
+
 export default function Page() {
-  return (
-    <ConnectGate>
-      <View />
-    </ConnectGate>
-  );
+  redirect("/crear");
 }

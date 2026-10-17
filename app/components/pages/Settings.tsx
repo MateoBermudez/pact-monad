@@ -11,6 +11,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { ChevronRight, PenLine, ShieldCheck, Sparkles } from "lucide-react";
 import { aiCanRelease, usePact } from "@/lib/client/pact-context";
 import { IllustrationGauge } from "@/components/Illustrations";
+import { ScreeningSettings } from "@/components/ScreeningSettings";
 
 const PRESETS = [5, 10, 25, 50];
 
@@ -51,6 +52,8 @@ export default function Settings() {
           límite, el dinero no se mueve sin tu firma.
         </p>
       </div>
+
+      <ScreeningSettings />
 
       <section className="overflow-hidden rounded-[2rem] bg-primary text-primary-foreground">
         <div className="grid items-center gap-6 p-6 sm:p-8 md:grid-cols-[1.1fr_1fr]">

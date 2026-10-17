@@ -687,7 +687,94 @@
 .location-options [role="option"] { padding: 10px 12px; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
 .location-options [role="option"]:hover, .location-options [aria-selected="true"] { background: #eaffb3; color: #111; }
 
+.keyword-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.screening-note {
+  border: 1px solid #1113;
+  border-left-width: 5px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #f7f8f1;
+}
+.screening-note p {
+  margin: 0;
+}
+.screening-note ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.screening-title {
+  font-weight: 700;
+  margin-bottom: 4px !important;
+}
+.screening-accept {
+  border-left-color: #98c02b;
+  background: #f0facf;
+}
+.screening-review {
+  border-left-color: #e0a526;
+}
+.screening-reject {
+  border-left-color: #d1503f;
+}
+.screening-modes {
+  display: grid;
+  gap: 10px;
+}
+.workspace-form .screening-mode {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  align-items: start;
+  text-align: left;
+  border: 2px solid #1113;
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #fff;
+}
+.workspace-form .screening-mode input {
+  width: auto;
+  padding: 0;
+  margin: 3px 0 0;
+  grid-row: 1 / span 2;
+}
+.workspace-form .screening-mode b {
+  font-size: 15px;
+}
+.workspace-form .screening-mode span {
+  grid-column: 2;
+  font-size: 13px;
+  opacity: 0.75;
+}
+.workspace-form .screening-mode:has(input:checked) {
+  border-color: #111;
+  background: #f0facf;
+}
+
 .avatar-upload { display: grid; justify-items: start; gap: 12px; margin-bottom: 20px; }
 .avatar-upload label { display: grid; gap: 8px; width: 100%; }
 .avatar-upload input { max-width: 100%; }
 .avatar-upload small { font-size: 13px; color: #666; }
+
+.workspace-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(17, 17, 17, 0.55);
+}
+.workspace-modal-card {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}

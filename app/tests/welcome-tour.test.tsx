@@ -17,7 +17,7 @@ it("permite recorrer los pasos, volver y salir sin conectar la wallet", async ()
   fireEvent.click(screen.getByRole("button", { name: "Anterior" }));
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Tu próximo proyecto");
   fireEvent.click(screen.getByRole("button", { name: /Paso 4:/ }));
-  expect(await screen.findByRole("link", { name: /Publicar una solicitud/ })).toHaveAttribute("href", "/solicitudes/nueva");
+  expect(await screen.findByRole("link", { name: /Publicar una solicitud/ })).toHaveAttribute("href", "/crear");
   expect(screen.getByRole("link", { name: /Explorar oportunidades/ })).toHaveAttribute("href", "/explorar");
   expect(screen.getByRole("link", { name: /Entrar a PACT/ })).toHaveAttribute("href", "/dashboard");
   expect(fetcher).toHaveBeenCalledTimes(1);

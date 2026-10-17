@@ -189,6 +189,16 @@ export const updateWebhookSchema = z.object({
 });
 export type UpdateWebhookInput = z.infer<typeof updateWebhookSchema>;
 
+export const DEFAULT_SCREENING_MODE = "assist" as const;
+export const MAX_SCREENING_CRITERIA = 1000;
+
+export const screeningSettingsSchema = z.object({
+  mode: z.enum(["off", "assist", "auto"]),
+  criteria: z.string().trim().max(MAX_SCREENING_CRITERIA).default(""),
+});
+export type ScreeningSettingsInput = z.infer<typeof screeningSettingsSchema>;
+export type ScreeningSettingsDto = { mode: "off" | "assist" | "auto"; criteria: string };
+
 export const sendMessageSchema = z.object({ body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) });
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 

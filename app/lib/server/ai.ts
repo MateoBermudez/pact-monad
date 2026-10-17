@@ -34,6 +34,15 @@ const reviewResponseSchema = z.object({
   model: z.string().min(1).max(100),
 });
 
+const screeningResponseSchema = z.object({
+  verdict: z.enum(["accept", "review", "reject"]),
+  score: z.number().int().min(0).max(100),
+  summary: z.string().min(1).max(1000),
+  strengths: z.array(z.string().max(300)).max(6),
+  concerns: z.array(z.string().max(300)).max(6),
+  model: z.string().min(1).max(100),
+});
+
 export type AiRule = { criterion: string; weight: number };
 
 export type StructureInput = {
@@ -128,4 +137,64 @@ export async function reviewWithAi(input: ReviewInput): Promise<ReviewOutput> {
     })),
     model: out.model,
   };
+}
+
+export type ScreeningInput = {
+  listing: {
+    title: string;
+    description: string;
+    category: string | null;
+    keywords: string[];
+    budgetMon: number | null;
+    deadlineDays: number | null;
+    rules: string[];
+  };
+  applicant: {
+    displayName: string;
+    bio: string;
+    skills: string[];
+    keywords: string[];
+    availability: string | null;
+    providerScore: number | null;
+    completedJobs: number;
+    portfolio: { title: string; description: string; url: string | null }[];
+  };
+  proposal: { message: string; priceMon: number | null; days: number | null };
+  clientPreferences: string;
+};
+
+export type ScreeningOutput = {
+  verdict: "accept" | "review" | "reject";
+  score: number;
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  model: string;
+};
+
+export async function screenApplicantWithAi(input: ScreeningInput): Promise<ScreeningOutput> {
+  const body = {
+    listing: {
+      title: input.listing.title,
+      description: input.listing.description,
+      category: input.listing.category,
+      keywords: input.listing.keywords,
+      budget_mon: input.listing.budgetMon,
+      deadline_days: input.listing.deadlineDays,
+      rules: input.listing.rules,
+    },
+    applicant: {
+      display_name: input.applicant.displayName,
+      bio: input.applicant.bio,
+      skills: input.applicant.skills,
+      keywords: input.applicant.keywords,
+      availability: input.applicant.availability,
+      provider_score: input.applicant.providerScore,
+      completed_jobs: input.applicant.completedJobs,
+      portfolio: input.applicant.portfolio,
+    },
+    proposal: { message: input.proposal.message, price_mon: input.proposal.priceMon, days: input.proposal.days },
+    client_preferences: input.clientPreferences,
+  };
+  return callAi("/screen-applicant", body, screeningResponseSchema, 30_000);
 }

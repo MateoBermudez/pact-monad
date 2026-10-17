@@ -113,6 +113,33 @@ export async function notifyMatchingProviders(db: Queryable, listing: PublishedL
   return matches.length;
 }
 
+export type NewNotification = {
+  userId: string;
+  type: NotificationDto["type"];
+  listingId: string;
+  title: string;
+  body?: string | null;
+  data?: Record<string, unknown>;
+  dedupe: string;
+};
+
+export async function createNotification(db: Queryable, input: NewNotification): Promise<void> {
+  await db.query(
+    `insert into notifications (user_id, type, listing_id, title, body, data, dedupe_key)
+     values ($1, $2, $3, $4, $5, $6::jsonb, $7)
+     on conflict (user_id, dedupe_key) do nothing`,
+    [
+      input.userId,
+      input.type,
+      input.listingId,
+      input.title,
+      input.body ?? null,
+      JSON.stringify(input.data ?? {}),
+      `${input.type}:${input.dedupe}`,
+    ],
+  );
+}
+
 export async function listNotifications(userId: string, limit: number): Promise<NotificationsResponse> {
   const [rows, [count]] = await Promise.all([
     query<NotificationRow>(

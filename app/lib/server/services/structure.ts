@@ -7,7 +7,7 @@ import { readFileBytes, requireOwnedFile } from "@/lib/server/services/files";
 import { DEFAULT_TITLE, getListing, requireOwnListing } from "@/lib/server/services/listings";
 import { saveRulesVersion } from "@/lib/server/services/rules";
 import type { SessionUser } from "@/lib/shared/auth";
-import { normalizeKeywords } from "@/lib/shared/keywords";
+import { deriveKeywords, normalizeKeywords } from "@/lib/shared/keywords";
 import type { StructureResultDto, StructureSource } from "@/lib/shared/listings";
 
 const FALLBACK_RULES = [
@@ -29,7 +29,7 @@ export function fallbackStructure(text: string): StructureOutput {
     amountMon: amount ? Number(amount[1].replace(",", ".")) : null,
     days: days ? Number(days[1]) : weeks ? Number(weeks[1]) * 7 : null,
     category: null,
-    keywords: [],
+    keywords: deriveKeywords(text),
     rules: FALLBACK_RULES,
   };
 }

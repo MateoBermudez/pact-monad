@@ -18,11 +18,22 @@ Lo que existe y se probó está en `roles-notificaciones.md`, `auth-ui.md` y `fr
 - [ ] **Claves expuestas:** la clave de Gemini que estuvo en `.env.example` quedó en el historial de la rama
       `feat/servicio-ia` de `pact-ai`. Ya está revocada; falta borrar esa rama remota (se reemplazó por `main`).
 
+## Evaluación de propuestas con IA
+
+- [ ] **Desplegar `pact-monad` y `pact-ai` con la evaluación.** El worker de producción sigue siendo el código viejo y
+      falla las tareas `screen_application` hasta que se despliegue. `pact-ai` necesita `POST /screen-applicant`.
+- [ ] **Modo `auto` elige a la primera que cumple.** Si el cliente quiere comparar varias, usa `assist`. Falta un modo
+      "esperar N horas o N propuestas y elegir la mejor".
+- [ ] **Calibrar con casos reales:** un perfil nuevo sin portafolio casi siempre queda en `review`. Ajustar el prompt con
+      ejemplos de la demo.
+- [ ] **Avisar al prestador si no tiene wallet** al postularse: hoy solo se entera cuando no puede ser elegido.
+
 ## Interfaz sin construir (el backend ya existe)
 
 - [ ] **Explorar solicitudes:** lista recomendada (`GET /api/listings?scope=recommended`) con puntaje y motivos.
 - [ ] **Detalle de solicitud** (`/solicitud/[id]`): la campanita no tiene a dónde llevar al tocar un aviso.
-- [ ] **Postularse** y, para el cliente, **ver postulantes, compararlos y elegir** (`/api/applications`).
+- [x] **Postularse** y, para el cliente, **ver postulantes, compararlos y elegir** (`/api/applications`), ahora con la
+      evaluación de la IA en cada propuesta.
 - [ ] **Buscar prestadores** (`/api/providers`) y perfil público (`/api/users/{id o @username}`).
 - [ ] **Subir briefs, portafolio y evidencias:** el cliente de subida directa existe, no hay selector de archivos.
 - [ ] **Refinar el borrador con IA** ("hazlo en 3 días"): `pact-ai` lo soporta (`previous` + `feedback`), la app no lo usa.
@@ -34,8 +45,8 @@ Lo que existe y se probó está en `roles-notificaciones.md`, `auth-ui.md` y `fr
 
 ## Notificaciones
 
-- [ ] **Más eventos dentro de la app:** hoy solo `listing.matched`. Faltan "recibiste una postulación", "te eligieron",
-      "entregaron", "aprobaron" y "la IA revisó". Los webhooks para agentes ya cubren esos eventos; la campanita no.
+- [ ] **Más eventos dentro de la app:** ya están `listing.matched`, `application.received`, `application.selected`,
+      `application.rejected` y `application.auto_selected`. Faltan "entregaron", "aprobaron" y "la IA revisó".
 - [ ] **Preferencias:** silenciar, puntaje mínimo, categorías.
 - [ ] **Fuera de la app:** correo o notificaciones push cuando la persona no tiene la pestaña abierta.
 - [ ] **Avisar al editar** una solicitud ya publicada, y a quien se une después (perfil nuevo que encaja con solicitudes

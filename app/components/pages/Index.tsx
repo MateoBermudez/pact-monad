@@ -1,13 +1,21 @@
 "use client";
 
 import { AgreementReview } from "@/components/AgreementReview";
+import { ListingPublish } from "@/components/ListingPublish";
 import { FileUpload } from "@/components/FileUpload";
 import type { FileDto } from "@/lib/shared/files";
 import {
   providerError,
+  publishListing,
   reviewSchema,
   structureAgreement,
 } from "@/lib/client/agreement-review";
+import {
+  FALLBACK_RULE,
+  parseRuleLines,
+  reviewListingSchema,
+} from "@/lib/shared/agreement-review";
+import { splitKeywords } from "@/lib/shared/keywords";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -84,6 +92,8 @@ function deriveTitle(description: string): string {
   if (!cleaned) return "Nuevo acuerdo";
   return (cleaned.charAt(0).toUpperCase() + cleaned.slice(1)).slice(0, 48);
 }
+
+const MIN_PROMPT = 10;
 
 const STEPS = ["Describe", "Revisa", "Confirma"] as const;
 
@@ -262,6 +272,12 @@ export default function Index({
   const [listingId, setListingId] = useState<string | undefined>();
   const [prepared, setPrepared] = useState(false);
   const [rules, setRules] = useState<string[]>([]);
+  const [rulesText, setRulesText] = useState("");
+  const [ruleWeights, setRuleWeights] = useState<Record<string, number>>({});
+  const [keywords, setKeywords] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const listing = !initialProvider;
   const revise = (set: (value: string) => void) => (value: string) => {
     if (prepared) {
       setListingId(undefined);
@@ -308,7 +324,7 @@ export default function Index({
   const setDesc = (v: string) => (manualMode ? setOriginal(v) : setAiDesc(v));
 
   const go = (n: number) => {
-    if (txState !== "idle") return;
+    if (txState !== "idle" || publishing) return;
     setDir(n > step ? 1 : -1);
     if (n === 2) {
       // Reset confirmation checkbox and error whenever entering step 3
@@ -318,12 +334,19 @@ export default function Index({
     setStep(n);
   };
 
-  const hasText = prompt.trim().length > 0 || brief !== null;
+  const canStructure = brief !== null || prompt.trim().length >= MIN_PROMPT;
+  const shortPrompt =
+    brief === null &&
+    prompt.trim().length > 0 &&
+    prompt.trim().length < MIN_PROMPT;
 
   const completeManually = () => {
     if (loading) return;
     setManualMode(true);
     setRules([]);
+    setRulesText("");
+    setRuleWeights({});
+    setKeywords("");
     setPrepared(false);
     setListingId(undefined);
     setFailed(false);
@@ -338,7 +361,7 @@ export default function Index({
 
   const structure = async () => {
     const text = prompt.trim();
-    if (loading || briefBusy || (!text && !brief)) return;
+    if (loading || briefBusy || !canStructure) return;
     setThinkIdx(0);
     setLoading(true);
     setFailed(false);
@@ -350,6 +373,16 @@ export default function Index({
       setPrepared(false);
       setListingId(result.listing.id);
       setRules(result.listing.rules?.map((rule) => rule.criterion) ?? []);
+      setRulesText(
+        result.listing.rules?.map((rule) => rule.criterion).join("\n") ?? "",
+      );
+      setRuleWeights(
+        Object.fromEntries(
+          result.listing.rules?.map((rule) => [rule.criterion, rule.weight]) ??
+            [],
+        ),
+      );
+      setKeywords(result.listing.keywords.join(", "));
       setAiDesc(result.listing.description ?? "");
       setTitle(result.listing.title);
       setAmount(result.listing.budgetMon ?? "");
@@ -378,11 +411,56 @@ export default function Index({
   const numDays = Number(days) || 0;
   const providerTrimmed = provider.trim();
   const walletError = providerError(provider, connected ? address : undefined);
-  const detailsOk =
-    reviewSchema.safeParse({ title, description: desc, amount, days, provider })
-      .success && !walletError;
+  const parsedRules = parseRuleLines(rulesText);
+  const detailsOk = listing
+    ? reviewListingSchema.safeParse({ title, description: desc, amount, days })
+        .success && !parsedRules.error
+    : reviewSchema.safeParse({
+        title,
+        description: desc,
+        amount,
+        days,
+        provider,
+      }).success && !walletError;
   const hasEnoughBalance = !connected || balance >= numAmount;
   const txBusy = txState !== "idle";
+
+  const publish = async () => {
+    if (publishing || !detailsOk) return;
+    setPublishError(null);
+    setPublishing(true);
+    try {
+      const criteria = parsedRules.rules.length
+        ? parsedRules.rules
+        : [FALLBACK_RULE];
+      const id = await publishListing(
+        {
+          listingId,
+          title: title.trim() || deriveTitle(desc),
+          description: desc.trim(),
+          amountMon: numAmount,
+          days: numDays,
+          keywords: splitKeywords(keywords),
+          rules: criteria.map((criterion) => ({
+            criterion,
+            weight: ruleWeights[criterion] ?? 3,
+          })),
+        },
+        setListingId,
+      );
+      toast.success("Oportunidad publicada", {
+        description: "Avisamos a quienes tienen esas habilidades.",
+      });
+      router.push(`/solicitudes/${id}`);
+    } catch (err) {
+      setPublishError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos publicar la oportunidad. Tus datos siguen guardados; puedes reintentar.",
+      );
+      setPublishing(false);
+    }
+  };
 
   const handleConfirmAction = async () => {
     if (txBusy) return;
@@ -534,16 +612,22 @@ export default function Index({
         <div className="space-y-1.5">
           <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl">
             {step === 2
-              ? "Confirma tu acuerdo."
+              ? listing
+                ? "Publica tu oportunidad."
+                : "Confirma tu acuerdo."
               : step === 1
                 ? "Revisa las condiciones."
                 : "Crea tu próximo acuerdo."}
           </h1>
           <p className="text-base text-muted-foreground sm:text-lg">
             {step === 2
-              ? "Revisa el resumen y bloquea los fondos para comenzar."
+              ? listing
+                ? "Revisa el resumen. No se bloquean fondos hasta que elijas a alguien."
+                : "Revisa el resumen y bloquea los fondos para comenzar."
               : step === 1
-                ? "Ajusta los detalles antes de crear tu acuerdo."
+                ? listing
+                  ? "Ajusta los detalles antes de publicar."
+                  : "Ajusta los detalles antes de crear tu acuerdo."
                 : "Cuéntanos qué necesitas. La IA te ayuda a organizarlo."}
           </p>
         </div>
@@ -614,6 +698,16 @@ export default function Index({
                         lee para proponer las reglas. Podrás editar todos los
                         detalles en el siguiente paso.
                       </p>
+                      {shortPrompt && (
+                        <p
+                          role="status"
+                          className="text-xs font-semibold text-foreground"
+                        >
+                          Escribe {MIN_PROMPT - prompt.trim().length} caracteres
+                          más (mínimo {MIN_PROMPT}) o adjunta un archivo para
+                          usar la IA. También puedes completar manualmente.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -746,7 +840,7 @@ export default function Index({
                   <button
                     type="button"
                     onClick={() => void structure()}
-                    disabled={loading || briefBusy || !hasText}
+                    disabled={loading || briefBusy || !canStructure}
                     className="group press inline-flex items-center justify-between gap-5 rounded-full bg-ink py-2 pl-7 pr-2 text-sm font-bold text-ink-foreground shadow-[0_4px_0_oklch(0.19_0.01_120/0.25)] transition-all enabled:hover:-translate-y-0.5 enabled:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:justify-center sm:text-base"
                   >
                     <span>
@@ -879,6 +973,11 @@ export default function Index({
               days={days}
               provider={provider}
               client={connected ? address : ""}
+              listing={listing}
+              keywords={keywords}
+              rules={rulesText}
+              onKeywords={setKeywords}
+              onRules={setRulesText}
               manual={manualMode}
               onTitle={revise(setTitle)}
               onDescription={(value) => {
@@ -901,8 +1000,25 @@ export default function Index({
             />
           )}
 
-          {/* PASO 03 · Confirma */}
-          {step === 2 && (
+          {step === 2 && listing && (
+            <ListingPublish
+              title={agreementTitle}
+              description={desc}
+              rules={
+                parsedRules.rules.length ? parsedRules.rules : [FALLBACK_RULE]
+              }
+              keywords={splitKeywords(keywords)}
+              amount={amount}
+              days={days}
+              busy={publishing}
+              error={publishError}
+              onEdit={() => go(1)}
+              onPublish={() => void publish()}
+            />
+          )}
+
+          {/* PASO 03 · Confirma (acuerdo directo) */}
+          {step === 2 && !listing && (
             <div className="grid items-start gap-6 lg:grid-cols-[1.38fr_1fr]">
               {/* Left Summary Card */}
               <section className="space-y-5 rounded-[1.75rem] border-2 border-ink bg-card p-6 shadow-[0_3px_0_var(--ink)] sm:p-8">

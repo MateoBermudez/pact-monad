@@ -1,4 +1,9 @@
-export type NotificationType = "listing.matched";
+export type NotificationType =
+  | "listing.matched"
+  | "application.received"
+  | "application.auto_selected"
+  | "application.selected"
+  | "application.rejected";
 
 export type NotificationDto = {
   id: string;
