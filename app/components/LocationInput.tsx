@@ -53,7 +53,7 @@ export function LocationInput({ value, onChange, disabled = false }: {
       aria-describedby={`${id}-help`}
       aria-activedescendant={open && active >= 0 ? `${id}-option-${active}` : undefined}
       onFocus={() => setFocused(true)} onBlur={() => { setFocused(false); setActive(-1); }}
-      onChange={(event) => { onChange(event.target.value); setActive(-1); setStatus(""); }}
+      onChange={(event) => { onChange(event.target.value); setFocused(true); setActive(-1); setStatus(""); }}
       onKeyDown={(event) => {
         if (event.key === "Escape") { setFocused(false); setActive(-1); }
         if (open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
