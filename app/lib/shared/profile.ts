@@ -1,3 +1,5 @@
+export const MAX_SKILLS = 10;
+
 export type SkillDto = { slug: string; name: string; category: string };
 
 export type UserSkillDto = SkillDto & { level: number };
