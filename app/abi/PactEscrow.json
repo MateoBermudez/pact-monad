@@ -1,7 +1,36 @@
 [
   {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "agent_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "maxAutoRelease_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "function",
     "name": "MAX_DESCRIPTION_LENGTH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_NOTE_LENGTH",
     "inputs": [],
     "outputs": [
       {
@@ -40,6 +69,19 @@
   },
   {
     "type": "function",
+    "name": "agent",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "agreementCount",
     "inputs": [],
     "outputs": [
@@ -63,6 +105,25 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "autoReleaseLimit",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -95,6 +156,11 @@
         "name": "deadline",
         "type": "uint64",
         "internalType": "uint64"
+      },
+      {
+        "name": "rulesHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -148,6 +214,11 @@
             "internalType": "uint256"
           },
           {
+            "name": "rulesHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
             "name": "description",
             "type": "string",
             "internalType": "string"
@@ -156,8 +227,26 @@
             "name": "evidenceUrl",
             "type": "string",
             "internalType": "string"
+          },
+          {
+            "name": "providerNote",
+            "type": "string",
+            "internalType": "string"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxAutoRelease",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -175,10 +264,71 @@
         "name": "evidenceUrl",
         "type": "string",
         "internalType": "string"
+      },
+      {
+        "name": "note",
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "releaseByAgent",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "decisionHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setAutoReleaseLimit",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AgentReleased",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "decisionHash",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -284,10 +434,35 @@
         "internalType": "uint64"
       },
       {
+        "name": "rulesHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
         "name": "description",
         "type": "string",
         "indexed": false,
         "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AutoReleaseLimitSet",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -313,9 +488,31 @@
         "type": "string",
         "indexed": false,
         "internalType": "string"
+      },
+      {
+        "name": "note",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AboveAutoReleaseLimit",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -340,12 +537,27 @@
   },
   {
     "type": "error",
+    "name": "EmptyDecisionHash",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "EmptyDescription",
     "inputs": []
   },
   {
     "type": "error",
     "name": "EmptyUrl",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAgent",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMaxAutoRelease",
     "inputs": []
   },
   {
@@ -366,7 +578,28 @@
   },
   {
     "type": "error",
+    "name": "LimitAboveCap",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "NoValueSent",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotAgent",
     "inputs": []
   },
   {
@@ -381,7 +614,17 @@
   },
   {
     "type": "error",
+    "name": "NoteTooLong",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ProviderIsClient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RulesNotConfirmed",
     "inputs": []
   },
   {

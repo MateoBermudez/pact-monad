@@ -5,12 +5,12 @@ import pg from "pg";
 
 const url = process.env.DATABASE_URL_SESSION;
 if (!url) {
-  console.error("Falta DATABASE_URL_SESSION (usa: npm run db:migrate, que carga .env.local).");
+  console.error("Falta DATABASE_URL_SESSION (usa: pnpm db:migrate, que carga .env.local).");
   process.exit(1);
 }
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");
-const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
+const files = (await readdir(dir)).filter((file) => file.endsWith(".sql")).sort();
 
 const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
 await client.connect();
@@ -23,7 +23,9 @@ try {
     );
     alter table schema_migrations enable row level security;
   `);
-  const applied = new Set((await client.query("select name from schema_migrations")).rows.map((r) => r.name));
+  const applied = new Set(
+    (await client.query<{ name: string }>("select name from schema_migrations")).rows.map((row) => row.name),
+  );
 
   for (const file of files) {
     if (applied.has(file)) {
@@ -39,7 +41,7 @@ try {
       console.log(`+ ${file}`);
     } catch (error) {
       await client.query("rollback");
-      console.error(`x ${file}: ${error.message}`);
+      console.error(`x ${file}: ${error instanceof Error ? error.message : String(error)}`);
       process.exitCode = 1;
       break;
     }

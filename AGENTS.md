@@ -13,7 +13,15 @@
 - **`pact-ai` (repo aparte) es únicamente la conexión con la IA.** Recibe texto, llama a Gemini y devuelve la respuesta
   estructurada. No tiene lógica de negocio, ni estado, ni acceso a la blockchain. Next.js lo llama desde el servidor con
   `AI_API_URL`; el navegador nunca habla con él directamente.
-- **El dinero solo se mueve con transacciones firmadas por el cliente o el proveedor** desde su wallet, contra el
-  contrato en `contracts/`. Ni el backend ni la IA tienen claves que muevan fondos.
+- **El dinero solo se mueve con transacciones contra el contrato en `contracts/`**, y solo hay dos formas de liberarlo:
+  la firma del cliente desde su wallet (`approveAndRelease`) o el agente de IA (`releaseByAgent`), que el contrato
+  limita por cliente: el límite vive on-chain, vale 0 por defecto y tiene un tope fijo. El agente solo puede pagar al
+  proveedor acordado, nunca a otra dirección. El backend firma como agente con `AGENT_PRIVATE_KEY` (solo en
+  `app/.env.local`), y solo después de guardar la decisión de la IA en la tabla `decisions` (inmutable), cuyo hash va
+  en la transacción. Si la IA dice "revisar", nunca se libera sola.
+- **Base de datos: Supabase (Postgres) por el pooler**, desde `lib/server/db.ts`. Los cambios de esquema son
+  migraciones numeradas en `app/db/migrations` (`pnpm db:migrate`); nunca se edita una migración ya aplicada.
+- **Todo en TypeScript estricto, sin `any`.** Las entradas de las rutas se validan con zod; los tipos que comparten
+  servidor y navegador viven en `lib/shared/`. Las rutas son delgadas: la lógica va en `lib/server/services/`.
 - Código que solo corre en el servidor importa `server-only`; el del navegador, `client-only`; lo compartido va en
   `lib/shared/`.
