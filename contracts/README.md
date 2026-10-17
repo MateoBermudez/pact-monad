@@ -59,15 +59,15 @@ Mientras no haya entrega (`Created` o `Accepted`), las partes pueden cambiar el 
 
 | | |
 |---|---|
-| Contrato | [`0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec`](https://testnet.monadscan.com/address/0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec) |
-| Bloque de despliegue | `71903631` |
+| Contrato | [`0x09AE7717bdcDC03eA73D539ECc321Dc96B8a80D3`](https://testnet.monadscan.com/address/0x09AE7717bdcDC03eA73D539ECc321Dc96B8a80D3) |
+| Bloque de despliegue | `71932735` |
 | Agente de IA | `0x7A9E29a2E37590a7242930AE8f259e8562800825` |
 | Tope de pago autónomo | 5.000.000 MON por cliente |
 | Código fuente | verificado en Sourcify (`exact_match`) |
 
 Los datos completos están en [`deployments/monad-testnet.json`](deployments/monad-testnet.json). Para la app:
-`NEXT_PUBLIC_CONTRACT_ADDRESS=0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec`, `CONTRACT_DEPLOY_BLOCK=71903631`,
-`NEXT_PUBLIC_CHAIN_ID=10143`. Antes de esto se ensayó el ciclo completo en la red real con otro contrato que ya no se usa.
+`NEXT_PUBLIC_CONTRACT_ADDRESS=0x09AE7717bdcDC03eA73D539ECc321Dc96B8a80D3`, `CONTRACT_DEPLOY_BLOCK=71932735`,
+`NEXT_PUBLIC_CHAIN_ID=10143`. Reemplaza al despliegue anterior (`0xD379…1Cec`, sin enmiendas); antes de eso se ensayó el ciclo completo en la red real con otro contrato que ya no se usa.
 
 ## Comandos
 

@@ -166,6 +166,7 @@ function toProposalDto(agreement: AgreementRow, row: ProposalRow, viewerId: stri
     deltaMon: trimMon(formatEther(delta)),
     newDeadline: row.new_deadline?.toISOString() ?? null,
     expiresAt: row.expiry.toISOString(),
+    terms: termsOf(agreement, row),
     status,
     createdAt: row.created_at.toISOString(),
     resolvedAt: row.resolved_at?.toISOString() ?? null,

@@ -102,7 +102,9 @@ export async function sendEscrowAction(
     | "registerDelivery"
     | "approveAndRelease"
     | "cancelAndRefund"
-    | "setAutoReleaseLimit",
+    | "setAutoReleaseLimit"
+    | "amendAgreement"
+    | "invalidateAmendments",
   args: readonly unknown[],
   expectedContract?: string,
 ): Promise<string> {
