@@ -52,3 +52,9 @@ cd contracts && forge install foundry-rs/forge-std && forge build
 
 A. Contrato y pruebas en local → B. Despliegue en Monad Testnet → C. Flujo manual sin IA → D. Capa de IA → E. Ensayo de la demo.
 Estado: estructura creada, sin lógica todavía. La maqueta visual está en el repo `pact-escrow` (rama `frontend-redesign`).
+
+## Maqueta visual actual
+
+La carpeta  `frontend/` contiene el estado actual de la interfaz de PACT, importado como archivos sin el historial de pact-escrow. Incluye ilustraciones animadas, tipografía Intropol, logos y favicon de PACT, y los ajustes de las cards y del encabezado. Mantiene su estado de demostración en React; todavía no está conectada al backend de app/.
+
+Para ejecutarla: entrar en frontend/, ejecutar npm ci y luego npm run dev. Para compilar: npm run build. Los contratos y el backend existentes se conservan en contracts/ y app/.
