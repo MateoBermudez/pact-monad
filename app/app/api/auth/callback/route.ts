@@ -37,6 +37,7 @@ export async function GET(request: Request) {
         if (current) return failure("already_signed_in");
         const user = await signInSocial(profile);
         await startSession(user.id);
+        if (!user.username) target.searchParams.set("onboarding", "1");
       }
       return NextResponse.redirect(target);
     } finally {

@@ -29,3 +29,9 @@ export type IdentityDto = {
   email: string | null;
   linkedAt: string;
 };
+
+export type OnboardingStatus = {
+  needsUsername: boolean;
+  needsSkills: boolean;
+  complete: boolean;
+};
