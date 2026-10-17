@@ -5,6 +5,7 @@ import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
 import { createSignedUploadUrl, deleteObject, downloadObject, signObjectUrl } from "@/lib/server/storage";
 import { FILE_RULES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
 import type { RequestUploadInput } from "@/lib/shared/schemas";
+import { fileReference } from "@/lib/shared/file-reference";
 
 type FileRow = {
   id: string;
@@ -158,9 +159,8 @@ async function canRead(userId: string | null, file: FileRow): Promise<boolean> {
     return Boolean(listing);
   }
   const [party] = await query<{ id: string }>(
-    `select a.id from agreements a join listings l on l.id = a.listing_id
-      where l.brief_file_id = $1 and $2 in (a.client_id, a.provider_id)`,
-    [file.id, userId],
+    `select a.id from agreements a where a.evidence_url = $1 and a.provider_id = $3 and $2 in (a.client_id, a.provider_id)`,
+    [fileReference(file.id), userId, file.owner_id],
   );
   return Boolean(party);
 }

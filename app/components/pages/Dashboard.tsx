@@ -92,7 +92,7 @@ export default function Dashboard() {
           <div>
             <p className="text-xs text-ink-foreground/60">Saldo disponible</p>
             <p className="font-display text-4xl font-bold sm:text-5xl">
-              <CountUp value={balance} />{" "}
+              {address ? <CountUp value={balance} /> : "—"}{" "}
               <span className="text-xl text-primary">MON</span>
             </p>
           </div>
@@ -101,7 +101,13 @@ export default function Dashboard() {
           </span>
         </div>
         <div className="mt-6 flex items-end justify-between text-xs text-ink-foreground/60">
-          <span className="font-mono">{short(address)}</span>
+          {address ? (
+            <span className="font-mono">{short(address)}</span>
+          ) : (
+            <Link href="/conectar" className="text-primary underline">
+              Vincula tu wallet para ver tu saldo
+            </Link>
+          )}
           <span className="flex items-center gap-1.5 text-primary">
             <Lock className="h-3.5 w-3.5" /> {locked} MON en escrow
           </span>
@@ -109,6 +115,17 @@ export default function Dashboard() {
       </motion.div>
 
       {/* quick actions */}
+      <nav aria-label="Más en PACT" className="flex flex-wrap gap-3 text-sm">
+        <Link href="/explorar" className="workspace-link">
+          Explorar talento y oportunidades ↗
+        </Link>
+        <Link href="/postulaciones" className="workspace-link">
+          Mis postulaciones ↗
+        </Link>
+        <Link href="/creditos" className="workspace-link">
+          Créditos de IA ↗
+        </Link>
+      </nav>
       <div className="grid grid-cols-2 justify-items-center gap-2">
         {[
           { to: "/crear", icon: Plus, label: "Nuevo" },

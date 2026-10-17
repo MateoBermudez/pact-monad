@@ -3,16 +3,35 @@ const base = process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3001";
 for (const [path, text] of [
   ["/", "PACT"],
   ["/crear", "Crea tu"],
-  ["/conectar", "Inicia sesi"],
+  ["/conectar", "Cargando tu sesi"],
   ["/dashboard", "Cargando tu sesi"],
   ["/configuracion", "Cargando tu sesi"],
+  ["/iniciar-sesion", "Cargando acceso"],
+  ["/registro", "Cargando registro"],
+  ["/explorar", "Encuentra tu"],
+  ["/solicitudes", "Cargando tu sesi"],
+  ["/solicitudes/nueva", "Cargando tu sesi"],
+  ["/postulaciones", "Cargando tu sesi"],
+  ["/portafolio", "Cargando tu sesi"],
+  ["/creditos", "Cargando tu sesi"],
+  ["/cuenta", "Cargando tu sesi"],
+  ["/integraciones", "Cargando tu sesi"],
 ]) {
   const response = await fetch(base + path);
   assert.equal(response.status, 200, path);
   assert.ok((await response.text()).includes(text), path + " renders its page");
   console.log(`OK ${path}`);
 }
-for (const path of ["/api/auth/me", "/api/agreements", "/api/dashboard"]) {
+for (const path of [
+  "/api/auth/me",
+  "/api/agreements",
+  "/api/dashboard",
+  "/api/portfolio",
+  "/api/applications",
+  "/api/credits",
+  "/api/agent-keys",
+  "/api/webhooks",
+]) {
   const response = await fetch(base + path);
   assert.equal(response.status, 401, path + " requires session");
   assert.equal((await response.json()).error, "unauthenticated");

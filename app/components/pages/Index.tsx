@@ -238,7 +238,9 @@ function ParticipantBox({
   );
 }
 
-export default function Index() {
+export default function Index({
+  initialProvider = "",
+}: { initialProvider?: string } = {}) {
   const {
     address,
     balance,
@@ -273,7 +275,7 @@ export default function Index() {
   const [aiDesc, setAiDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [days, setDays] = useState("");
-  const [provider, setProvider] = useState("");
+  const [provider, setProvider] = useState(initialProvider);
   const [confirmedTerms, setConfirmedTerms] = useState(false);
   const [txState, setTxState] = useState<TxState>("idle");
   const [txError, setTxError] = useState<string | null>(null);
@@ -326,7 +328,7 @@ export default function Index() {
     setTitle("");
     setAmount("");
     setDays("");
-    setProvider("");
+    setProvider(initialProvider);
     go(1);
   };
 
@@ -352,7 +354,7 @@ export default function Index() {
           ? ""
           : String(result.listing.deadlineDays),
       );
-      setProvider("");
+      setProvider(initialProvider);
       setManualMode(result.source !== "ai");
       if (result.source !== "ai") setOriginal(result.listing.description ?? "");
       setLoading(false);

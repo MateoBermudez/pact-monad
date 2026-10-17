@@ -8,7 +8,7 @@ Rutas: `/iniciar-sesion`, `/registro`, `/perfil`, `/terminos` y `/privacidad`.
 La interfaz usa los contratos del backend en `feat/login-social`: inicio OAuth
 `GET /api/auth/oauth/google|github`, callback del servidor, consulta de identidades
 `GET /api/auth/identities` y disponibilidad/reserva de nombre `GET/PUT /api/username`.
-Se integró `origin/feat/login-social` (bb7fa88), que incluye main (9472711).
+Se integró `origin/feat/login-social` (bb7fa88) y posteriormente main (9472711).
 Configurar Supabase, las migraciones y los proveedores sigue siendo necesario
 para probar OAuth real. El acceso no crea sesiones simuladas.
 
@@ -26,7 +26,6 @@ de guardar el perfil; si falla la segunda operación, permanece reservado y se
 puede reintentar el guardado sin cambiarlo.
 
 Los documentos legales incluyen el responsable y contacto proporcionados por el
-equipo. Son borradores para revisión. Antes de publicar el registro definitivo,
-el backend debe conservar prueba de las autorizaciones exigibles, y el equipo
-debe revisar los proveedores, transferencias y plazos reales de conservación.
-La interfaz no afirma registrar esa prueba actualmente.
+equipo y se mantienen como textos de la demo. La vinculación de un segundo
+proveedor social está disponible en `/cuenta`; los errores del callback se
+muestran en esa pantalla.

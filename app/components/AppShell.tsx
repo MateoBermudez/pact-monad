@@ -51,11 +51,11 @@ function Shell({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <MotionConfig reducedMotion="user">
-      <PactProvider>
-        <Suspense fallback={<p className="p-6">Cargando PACT…</p>}>
+      <Suspense fallback={<p className="p-6">Cargando PACT…</p>}>
+        <PactProvider>
           <Shell>{children}</Shell>
-        </Suspense>
-      </PactProvider>
+        </PactProvider>
+      </Suspense>
     </MotionConfig>
   );
 }

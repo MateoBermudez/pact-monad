@@ -1,51 +1,48 @@
-# Estado del frontend — 17 de octubre de 2026
+# Frontend de la demo
 
-Revisado sobre main `9472711` y acceso social `bb7fa88` integrados.
-“Conectado” significa que hay llamadas reales y contratos compatibles en código;
-no sustituye una prueba con Supabase, OAuth, IA y Monad desplegados.
+El frontend utiliza las APIs de Next.js. No hay datos simulados en las pantallas;
+las pruebas de interfaz sí utilizan fixtures aislados.
 
-## Flujo implementado y conectado
+| Vista | Ruta | Conexión |
+|---|---|---|
+| Acceso y registro | `/iniciar-sesion`, `/registro` | OAuth Google/GitHub |
+| Perfil inicial | `/perfil` | Nombre de usuario, habilidades y perfil |
+| Cuenta | `/cuenta` | Perfil ampliado, enlaces, disponibilidad, identidades y wallet |
+| Explorar | `/explorar` | Oportunidades y prestadores con búsqueda y filtros |
+| Solicitudes | `/solicitudes`, `/solicitudes/nueva`, `/solicitudes/[id]` | Brief, borrador, IA, condiciones, publicación, postulantes y selección |
+| Postulaciones | `/postulaciones` | Estado y retirada de propuestas |
+| Perfil público | `/personas/[id]` | Reputación, habilidades, enlaces y portafolio |
+| Portafolio | `/portafolio` | Publicar/quitar proyectos y adjuntar archivos |
+| Créditos | `/creditos` | Saldo, costes, pago y acreditación/reintento por hash |
+| Integraciones | `/integraciones` | Claves de agente, revocación, webhooks, pruebas, secretos y entregas |
+| Acuerdos | `/dashboard`, `/pact/[id]` | Estados, acciones del contrato, evidencias, IA y calificaciones |
+| Crear directo | `/crear` | Descripción, revisión, proveedor y bloqueo de fondos |
+| Configuración | `/configuracion` | Límite de liberación de IA en el contrato |
 
-- Acceso y registro Google/GitHub: rutas OAuth y callback del servidor.
-- Perfil: consulta/reserva de nombre, catálogo de habilidades y guardado.
-- Wallet: sesión previa, firma de reto, vinculación persistida y comprobación
-  de que la cuenta de MetaMask coincide con la vinculada antes de operar.
-- Crear acuerdo: descripción, estructuración con IA, revisión manual,
-  confirmación, preparación en el backend y bloqueo mediante el contrato.
-- Panel y detalle de acuerdos: lectura del backend, aceptar, cancelar,
-  registrar entrega mediante URL, aprobar/liberar, revisión de IA e indexación.
-- Límite de liberación automática: lectura del servidor y escritura on-chain.
-- Actualizaciones: SSE con consulta periódica de respaldo para hosting que no
-  mantenga la conexión, utilizando el cliente añadido en main.
+## Archivos
 
-## Funciones del backend sin interfaz completa
+Se reutiliza el flujo existente: `POST /api/files/upload-url` → PUT directo a
+Supabase → `POST /api/files/[id]/complete`. El servidor comprueba tamaño, tipo
+real y hash. Límites compartidos: brief 7 MB, portafolio/evidencia 10 MB.
 
-- Marketplace: buscar prestadores, perfiles públicos y publicar oportunidades.
-- Postulaciones: presentar, comparar y seleccionar candidatos.
-- Portafolio: edición y presentación de proyectos y archivos.
-- Archivos: existe el cliente de subida directa a Supabase, pero las pantallas
-  actuales no ofrecen selección/subida de briefs, portafolio o evidencias.
-  Registrar una entrega actualmente permite pegar una URL.
-- Calificaciones: API de rating sin formulario de valoración tras finalizar.
-- Créditos de IA: API de saldo/compra sin pantalla de compra ni consumo.
-- Integraciones avanzadas: claves de agente y webhooks sin panel de gestión.
-- Cuenta: enlazar un segundo proveedor social y consultar identidades vinculadas
-  tienen endpoints, pero faltan controles de administración en la interfaz.
+La evidencia registra `pact-file:<uuid>` en el contrato, no una URL que caduca.
+El backend comprueba que pertenece al proveedor del acuerdo; permite leerla al
+propietario y a las partes. Para la IA resuelve una URL firmada nueva sin
+publicar el token de Storage en blockchain. Las URL externas siguen funcionando.
 
-## Pendientes para producción y validación
+## Wallet y recuperación
 
-- Verificar migraciones aplicadas y configuración de Supabase, Storage,
-  Google/GitHub y URLs de retorno. No se han aplicado migraciones en esta tarea.
-- Configurar contrato, RPC, bloque de despliegue, servicio pact-ai, agente y
-  worker/webhooks en el entorno de despliegue.
-- Probar de extremo a extremo con dos usuarios: acceso → perfil → wallet →
-  creación → aceptación → entrega → revisión → liberación/reembolso.
-- Revisar móvil y escritorio en navegador y probar cancelaciones de firma,
-  cambios de cuenta/red, errores de IA, permisos de archivos y red interrumpida.
-- Revisar los borradores legales y conservar prueba de las autorizaciones
-  exigibles. La nota del registro no implementa por sí sola esa persistencia.
-- El perfil guarda la elección cliente/proveedor/ambos como presentación
-  (`headline`), no como un rol ni un permiso de seguridad.
+Primero se inicia sesión. La wallet se verifica por firma y queda en
+`users.wallet`; las transacciones comprueban la cuenta seleccionada.
+Elegir una propuesta y firmar el bloqueo son pasos distintos.
 
-No hay archivo `.env.local` en esta copia durante la revisión; no se ha
-verificado el funcionamiento real de los servicios externos ni del dinero.
+`GET /api/listings/[id]/selection` recupera las condiciones canónicas y rechaza
+otro bloqueo si ya existe un acuerdo indexado. Se conserva el hash enviado en
+este navegador y se comprueba el recibo antes de reintentar. Si se pierde ese
+estado, revisar Mis acuerdos y el explorer antes de volver a firmar.
+
+## Qué falta fuera del código
+
+Configurar y probar servicios reales. No se aplicaron migraciones ni se enviaron
+transacciones reales durante esta ampliación. Esta copia no tiene `.env.local`.
+Ver [demo-checklist.md](demo-checklist.md) para los pasos del equipo.
