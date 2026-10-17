@@ -95,3 +95,12 @@ export const createAgentKeySchema = z.object({
   expiresInDays: z.number().int().min(1).max(365).optional(),
 });
 export type CreateAgentKeyInput = z.infer<typeof createAgentKeySchema>;
+
+export const reviewAgreementSchema = z.object({ release: z.boolean().default(false) });
+export type ReviewAgreementInput = z.infer<typeof reviewAgreementSchema>;
+
+export const rateAgreementSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(500).optional(),
+});
+export type RateAgreementInput = z.infer<typeof rateAgreementSchema>;
