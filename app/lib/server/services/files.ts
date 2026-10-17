@@ -1,9 +1,10 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { query } from "@/lib/server/db";
-import { ApiError, forbidden, notFound } from "@/lib/server/http";
-import { deleteObject, downloadObject, signObjectUrl, uploadObject } from "@/lib/server/storage";
-import { FILE_RULES, type FileDto, type FilePurpose } from "@/lib/shared/files";
+import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
+import { createSignedUploadUrl, deleteObject, downloadObject, signObjectUrl } from "@/lib/server/storage";
+import { FILE_RULES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
+import type { RequestUploadInput } from "@/lib/shared/schemas";
 
 type FileRow = {
   id: string;
@@ -13,9 +14,14 @@ type FileRow = {
   file_name: string;
   mime_type: string;
   size_bytes: string;
-  sha256: string;
+  sha256: string | null;
+  status: "pending" | "ready";
   created_at: Date;
 };
+
+const MAX_PENDING_PER_USER = 10;
+const PENDING_TTL = "1 hour";
+const UPLOAD_URL_TTL_SECONDS = 2 * 60 * 60;
 
 const toDto = (row: FileRow): FileDto => ({
   id: row.id,
@@ -23,7 +29,7 @@ const toDto = (row: FileRow): FileDto => ({
   fileName: row.file_name,
   mimeType: row.mime_type,
   sizeBytes: Number(row.size_bytes),
-  sha256: row.sha256,
+  sha256: row.sha256 ?? "",
   createdAt: row.created_at.toISOString(),
 });
 
@@ -50,38 +56,90 @@ function matchesMime(bytes: Uint8Array, mime: string): boolean {
 
 const safeName = (name: string) => name.replace(/[^\w.\-]+/g, "_").slice(-80) || "archivo";
 
-export async function saveFile(ownerId: string, purpose: FilePurpose, file: File): Promise<FileDto> {
-  const rules = FILE_RULES[purpose];
-  if (file.size === 0) throw new ApiError(400, "empty_file", "El archivo está vacío");
-  if (file.size > rules.maxBytes) {
-    throw new ApiError(413, "file_too_large", `El máximo es ${Math.round(rules.maxBytes / 1024 / 1024)} MB`);
+async function discardPending(ownerId: string): Promise<void> {
+  const stale = await query<{ storage_path: string }>(
+    `delete from files where owner_id = $1 and status = 'pending' and created_at < now() - interval '${PENDING_TTL}'
+     returning storage_path`,
+    [ownerId],
+  );
+  await Promise.all(stale.map((row) => deleteObject(row.storage_path).catch(() => undefined)));
+}
+
+// Paso 1: el navegador pide permiso para subir. El archivo no viaja por una función del servidor (Vercel rechaza cuerpos
+// de más de 4,5 MB): se sube directo a Storage con una URL de un solo uso, y el paso 2 comprueba lo que llegó.
+export async function requestUpload(ownerId: string, input: RequestUploadInput): Promise<UploadTicketDto> {
+  const rules = FILE_RULES[input.purpose];
+  if (input.sizeBytes > rules.maxBytes) {
+    throw new ApiError(413, "file_too_large", `El máximo para ${input.purpose} es ${Math.round(rules.maxBytes / 1024 / 1024)} MB`);
   }
-  if (!rules.mimeTypes.includes(file.type)) {
-    throw new ApiError(415, "unsupported_type", `Tipo no permitido para ${purpose}: ${file.type || "desconocido"}`);
+  if (!rules.mimeTypes.includes(input.mimeType)) {
+    throw new ApiError(415, "unsupported_type", `Tipo no permitido para ${input.purpose}: ${input.mimeType}`);
   }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!matchesMime(bytes, file.type)) {
-    throw new ApiError(415, "content_mismatch", "El contenido del archivo no coincide con su tipo");
+  await discardPending(ownerId);
+  const [{ pending }] = await query<{ pending: number }>(
+    "select count(*)::int as pending from files where owner_id = $1 and status = 'pending'",
+    [ownerId],
+  );
+  if (pending >= MAX_PENDING_PER_USER) throw conflict("Tienes demasiadas subidas sin confirmar; completa o espera a que venzan");
+
+  const storagePath = `${ownerId}/${input.purpose}/${randomUUID()}-${safeName(input.fileName)}`;
+  const uploadUrl = await createSignedUploadUrl(storagePath);
+  const [row] = await query<{ id: string }>(
+    `insert into files (owner_id, purpose, storage_path, file_name, mime_type, size_bytes, status)
+     values ($1, $2, $3, $4, $5, $6, 'pending')
+     returning id`,
+    [ownerId, input.purpose, storagePath, input.fileName.slice(0, 200), input.mimeType, input.sizeBytes],
+  );
+  return {
+    fileId: row.id,
+    uploadUrl,
+    method: "PUT",
+    headers: { "content-type": input.mimeType },
+    expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
+  };
+}
+
+async function reject(row: FileRow, error: ApiError): Promise<never> {
+  await deleteObject(row.storage_path).catch(() => undefined);
+  await query("delete from files where id = $1 and status = 'pending'", [row.id]);
+  throw error;
+}
+
+// Paso 2: el servidor descarga lo que llegó y comprueba tamaño, tipo real y hash antes de dar el archivo por bueno.
+export async function completeUpload(ownerId: string, fileId: string): Promise<FileDto> {
+  const [row] = await query<FileRow>("select * from files where id = $1 and owner_id = $2", [fileId, ownerId]);
+  if (!row) throw notFound("Archivo");
+  if (row.status === "ready") throw conflict("Este archivo ya está confirmado");
+
+  const rules = FILE_RULES[row.purpose];
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = await downloadObject(row.storage_path);
+  } catch {
+    throw new ApiError(409, "not_uploaded", "Todavía no se subió el archivo a la URL que te dimos");
   }
 
-  const storagePath = `${ownerId}/${purpose}/${randomUUID()}-${safeName(file.name)}`;
-  await uploadObject(storagePath, bytes, file.type);
+  if (bytes.length === 0 || bytes.length > rules.maxBytes) {
+    await reject(row, new ApiError(413, "file_too_large", `El archivo está vacío o supera ${Math.round(rules.maxBytes / 1024 / 1024)} MB`));
+  }
+  if (bytes.length !== Number(row.size_bytes)) {
+    await reject(row, new ApiError(400, "size_mismatch", "El tamaño del archivo no coincide con el que declaraste"));
+  }
+  if (!matchesMime(bytes, row.mime_type)) {
+    await reject(row, new ApiError(415, "content_mismatch", "El contenido del archivo no coincide con su tipo"));
+  }
 
-  const [row] = await query<FileRow>(
-    `insert into files (owner_id, purpose, storage_path, file_name, mime_type, size_bytes, sha256)
-     values ($1, $2, $3, $4, $5, $6, $7)
-     returning *`,
-    [ownerId, purpose, storagePath, file.name.slice(0, 200), file.type, file.size, createHash("sha256").update(bytes).digest("hex")],
-  ).catch(async (error: unknown) => {
-    await deleteObject(storagePath);
-    throw error;
-  });
-  return toDto(row);
+  const [ready] = await query<FileRow>(
+    `update files set status = 'ready', sha256 = $2 where id = $1 and status = 'pending' returning *`,
+    [fileId, createHash("sha256").update(bytes).digest("hex")],
+  );
+  if (!ready) throw conflict("Este archivo ya está confirmado");
+  return toDto(ready);
 }
 
 async function loadFile(fileId: string): Promise<FileRow> {
-  const [row] = await query<FileRow>("select * from files where id = $1", [fileId]);
+  const [row] = await query<FileRow>("select * from files where id = $1 and status = 'ready'", [fileId]);
   if (!row) throw notFound("Archivo");
   return row;
 }

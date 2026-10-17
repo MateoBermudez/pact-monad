@@ -9,6 +9,14 @@ export const purchaseCreditsSchema = z.object({ txHash: txHashSchema });
 
 export const filePurposeSchema = z.enum(FILE_PURPOSES);
 
+export const requestUploadSchema = z.object({
+  purpose: filePurposeSchema,
+  fileName: z.string().trim().min(1).max(200),
+  mimeType: z.string().trim().min(1).max(100),
+  sizeBytes: z.number().int().min(1).max(100 * 1024 * 1024),
+});
+export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
+
 export const updateProfileSchema = z.object({
   displayName: z.string().trim().min(1).max(60).nullable().optional(),
   headline: z.string().trim().max(120).nullable().optional(),

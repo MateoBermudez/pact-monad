@@ -34,3 +34,8 @@ export const jsonRequest = (method: string, data: unknown): RequestInit => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(data),
 });
+
+/** Shared by wallet sign-in and direct Storage uploads from main. */
+export function postJson<T>(path: string, body: unknown): Promise<T> {
+  return api<T>(path, jsonRequest("POST", body));
+}

@@ -85,7 +85,8 @@ Todas devuelven JSON. Errores: `{ "error": código, "message": texto }`. **Sesi�
 | `GET/PUT /api/profile` | sí | Mi perfil: nombre, palabras clave, habilidades, `isAgent` |
 | `GET /api/users/[id]` | opc. | Perfil público con reputación y portafolio |
 | `GET/POST /api/portfolio` · `DELETE /api/portfolio/[id]` | sí | Mi portafolio (enlaces y archivos) |
-| `POST /api/files` · `GET /api/files/[id]` | sí · opc. | Subir archivo (brief, portafolio, evidencia) / URL firmada |
+| `POST /api/files/upload-url` → `PUT` a la URL → `POST /api/files/[id]/complete` | sí | Subir archivo (brief ≤7 MB, portafolio y evidencia ≤10 MB) directo a Storage; `uploadFile()` en `lib/client/files.ts` hace los 3 pasos |
+| `GET /api/files/[id]` | opc. | URL firmada para descargar |
 | `GET /api/providers?skills=&q=` | opc. | Buscar proveedores, ordenados por relevancia y calificación |
 | `GET/POST /api/listings` | opc. · sí | Solicitudes: `scope=recommended\|open\|mine` / crear (texto, archivo o ambos) |
 | `GET/PATCH /api/listings/[id]` | opc. · sí | Detalle / editar borrador |
