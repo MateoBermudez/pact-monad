@@ -19,6 +19,8 @@ import type {
   ReviewOutcomeDto,
 } from "@/lib/shared/agreements";
 import { trimMon } from "@/lib/shared/money";
+import { referencedFileId } from "@/lib/shared/file-reference";
+import { getSignedFileUrl } from "@/lib/server/services/files";
 
 const DELIVERED_ON_CHAIN = 3;
 
@@ -341,12 +343,14 @@ export async function reviewAgreement(args: { agreementId: string; clientId: str
 
   let ai: ReviewOutput;
   try {
+    const fileId = referencedFileId(agreement.evidence_url ?? "");
+    const evidenceUrl = fileId ? (await getSignedFileUrl(args.clientId, fileId)).url : agreement.evidence_url ?? "";
     ai = await withCredits(args.clientId, "review", () =>
       reviewWithAi({
         requirements: agreement.listing_description ?? agreement.description ?? "",
         rules,
         providerNote: agreement.provider_note ?? "",
-        evidenceUrl: agreement.evidence_url ?? "",
+        evidenceUrl,
       }),
     );
   } catch (error) {

@@ -20,14 +20,21 @@ import { api, jsonRequest } from "@/lib/client/api";
 import { sendEscrowAction } from "@/lib/client/escrow-wallet";
 import { usePact } from "@/lib/client/pact-context";
 import { subscribeToChanges } from "@/lib/client/realtime";
+import { FileUpload, FileLink } from "@/components/FileUpload";
+import type { FileDto } from "@/lib/shared/files";
+import { fileReference, referencedFileId } from "@/lib/shared/file-reference";
 
 export default function PactDetail({ id }: { id: string }) {
   const { refresh } = usePact();
   const [agreement, setAgreement] = useState<AgreementDetailDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [note, setNote] = useState("");
+  const [evidenceFile, setEvidenceFile] = useState<FileDto | null>(null);
+  const [score, setScore] = useState("5");
+  const [comment, setComment] = useState("");
   const load = useCallback(async () => {
     try {
       const data = await api<{ agreement: AgreementDetailDto }>(
@@ -73,13 +80,17 @@ export default function PactDetail({ id }: { id: string }) {
       | "approveAndRelease"
       | "cancelAndRefund",
   ) {
-    if (!agreement || busy) return;
+    if (!agreement || busy || uploading) return;
     setBusy(true);
     setError(null);
     try {
       const args =
         method === "registerDelivery"
-          ? [agreement.chainAgreementId, evidenceUrl, note]
+          ? [
+              agreement.chainAgreementId,
+              evidenceFile ? fileReference(evidenceFile.id) : evidenceUrl,
+              note,
+            ]
           : [agreement.chainAgreementId];
       const hash = await sendEscrowAction(
         method,
@@ -100,7 +111,7 @@ export default function PactDetail({ id }: { id: string }) {
     }
   }
   async function review(release: boolean) {
-    if (busy) return;
+    if (busy || uploading) return;
     setBusy(true);
     setError(null);
     try {
@@ -196,14 +207,21 @@ export default function PactDetail({ id }: { id: string }) {
             <FileText className="h-5 w-5" />
             Entrega
           </h2>
-          <a
-            href={agreement.evidenceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="break-all text-sm underline"
-          >
-            {agreement.evidenceUrl}
-          </a>
+          {referencedFileId(agreement.evidenceUrl) ? (
+            <FileLink
+              id={referencedFileId(agreement.evidenceUrl)!}
+              label="Abrir evidencia de la entrega"
+            />
+          ) : (
+            <a
+              href={agreement.evidenceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-sm underline"
+            >
+              {agreement.evidenceUrl}
+            </a>
+          )}
           <p className="text-sm">{agreement.providerNote}</p>
         </section>
       )}
@@ -276,7 +294,7 @@ export default function PactDetail({ id }: { id: string }) {
           <label className="block space-y-2 text-sm">
             Enlace a la evidencia
             <input
-              required
+              required={!evidenceFile}
               type="url"
               maxLength={512}
               value={evidenceUrl}
@@ -284,6 +302,13 @@ export default function PactDetail({ id }: { id: string }) {
               className="w-full rounded-xl border p-3"
             />
           </label>
+          <FileUpload
+            purpose="evidence"
+            value={evidenceFile}
+            onChange={setEvidenceFile}
+            onBusyChange={setUploading}
+            disabled={busy}
+          />
           <label className="block space-y-2 text-sm">
             Nota de entrega
             <textarea
@@ -294,7 +319,7 @@ export default function PactDetail({ id }: { id: string }) {
               className="w-full rounded-xl border p-3"
             />
           </label>
-          <button disabled={busy} className="btn-primary">
+          <button disabled={busy || uploading} className="btn-primary">
             Firmar entrega
           </button>
         </form>
@@ -303,6 +328,72 @@ export default function PactDetail({ id }: { id: string }) {
         <p role="status" className="text-sm text-muted-foreground">
           Esperando confirmación…
         </p>
+      )}
+      {agreement.canRate && (
+        <form
+          className="workspace-card workspace-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError(null);
+            try {
+              await api(
+                `/api/agreements/${id}/rating`,
+                jsonRequest("POST", { score: Number(score), comment }),
+              );
+              await load();
+              toast.success("Valoración guardada");
+            } catch (e) {
+              setError(
+                e instanceof Error
+                  ? e.message
+                  : "No se pudo guardar la valoración.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <h2>¿Cómo fue trabajar juntos?</h2>
+          <label>
+            Tu valoración
+            <select value={score} onChange={(e) => setScore(e.target.value)}>
+              {[5, 4, 3, 2, 1].map((value) => (
+                <option key={value} value={value}>
+                  {value} {value === 1 ? "estrella" : "estrellas"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Tu experiencia (opcional)
+            <textarea
+              maxLength={500}
+              rows={3}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+          </label>
+          <button className="btn-primary" disabled={busy}>
+            Publicar valoración
+          </button>
+        </form>
+      )}
+      {agreement.ratings.length > 0 && (
+        <section className="workspace-card">
+          <h2>Valoraciones del acuerdo</h2>
+          {agreement.ratings.map((rating) => (
+            <div key={rating.id} className="workspace-divider">
+              <strong>
+                {rating.score}/5 · Para{" "}
+                {rating.rateeRole === "provider"
+                  ? "el proveedor"
+                  : "el cliente"}
+              </strong>
+              <p>{rating.comment ?? "Sin comentario"}</p>
+            </div>
+          ))}
+        </section>
       )}
     </div>
   );

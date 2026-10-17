@@ -75,8 +75,7 @@ export function LegalDocument({ privacy = false }: { privacy?: boolean }) {
       <Link href="/registro">← Volver al registro</Link>
       <h1>{privacy ? "Política de privacidad" : "Términos de uso"}</h1>
       <p className="auth-muted">
-        Versión del 17 de octubre de 2026 · Borrador para revisión antes de su
-        publicación definitiva.
+        Versión del 17 de octubre de 2026
       </p>
       {sections.map(([title, body]) => (
         <section key={title}>

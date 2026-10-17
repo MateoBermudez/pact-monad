@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Home,
+  Compass,
   LayoutGrid,
   LogOut,
   Plus,
@@ -91,7 +92,7 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
           <div className="flex items-center gap-2">
             <NotificationBell />
             <Link
-              href="/perfil"
+              href="/cuenta"
               aria-label="Mi perfil"
               className="rounded-full bg-primary/30 p-2"
             >
@@ -165,6 +166,7 @@ const DOCK: {
   match: (p: string) => boolean;
 }[] = [
   { to: "/", label: "Inicio", icon: Home, match: (p) => p === "/" },
+  { to: "/explorar", label: "Explorar", icon: Compass, match: (p) => ["/explorar", "/solicitudes", "/postulaciones", "/personas"].some(prefix=>p.startsWith(prefix)) },
   {
     to: "/dashboard",
     label: "Acuerdos",

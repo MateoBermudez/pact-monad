@@ -1,6 +1,6 @@
 import "server-only";
 import { pool, query, withTransaction } from "@/lib/server/db";
-import { ApiError, conflict, forbidden, notFound, requireRole } from "@/lib/server/http";
+import { ApiError, conflict, forbidden, notFound, requireRole, requireWallet } from "@/lib/server/http";
 import { getListing, requireListing, requireOwnListing } from "@/lib/server/services/listings";
 import { loadProviderSummaries } from "@/lib/server/services/profiles";
 import { emitWebhook } from "@/lib/server/services/webhooks";
@@ -170,6 +170,7 @@ export async function actOnApplication(
 
 // Elegir proveedor adjudica la solicitud y descarta al resto; después el cliente firma createAgreement con estos parámetros.
 async function select(user: SessionUser, applicationId: string): Promise<ActionOutcome> {
+  requireWallet(user);
   const params = await withTransaction(async (client): Promise<CreateAgreementParams> => {
     const { rows } = await client.query<ApplicationRow>(`${SELECT_APPLICATION} where id = $1 for update`, [applicationId]);
     const application = rows[0];
@@ -207,9 +208,10 @@ async function select(user: SessionUser, applicationId: string): Promise<ActionO
       applicationId,
     ]);
 
-    const { rows: providers } = await client.query<{ wallet: string }>("select wallet from users where id = $1", [
+    const { rows: providers } = await client.query<{ wallet: string | null }>("select wallet from users where id = $1", [
       application.provider_id,
     ]);
+    if (!providers[0]?.wallet) throw new ApiError(422, "provider_wallet_required", "El proveedor debe vincular una wallet antes de ser elegido");
     const amount = application.price_mon ?? listing.budget_mon;
     if (!amount) throw new ApiError(422, "missing_terms", "La solicitud no tiene monto definido");
 
@@ -227,5 +229,46 @@ async function select(user: SessionUser, applicationId: string): Promise<ActionO
   return {
     application: (await toDtos([updated]))[0],
     selection: { listing: await getListing(user, listingId), contractCall: params },
+  };
+}
+
+// Resume the canonical selected terms after a reload or a cancelled wallet signature.
+export async function selectedAgreement(
+  user: SessionUser,
+  listingId: string,
+): Promise<CreateAgreementParams> {
+  requireWallet(user);
+  const listing = await requireOwnListing(pool(), user.id, listingId);
+  if (
+    listing.status !== "awarded" ||
+    !listing.rules_hash ||
+    !listing.deadline_days
+  )
+    throw conflict("La solicitud no tiene una propuesta seleccionada");
+  const [existing] = await query(
+    "select id from agreements where listing_id = $1",
+    [listingId],
+  );
+  if (existing)
+    throw conflict(
+      "Esta oportunidad ya tiene un acuerdo. Consúltalo en Mis acuerdos",
+    );
+  const [selected] = await query<{
+    wallet: string | null;
+    price_mon: string | null;
+    days: number | null;
+  }>(
+    `select u.wallet, a.price_mon::text, a.days from applications a join users u on u.id = a.provider_id where a.listing_id = $1 and a.status = 'selected'`,
+    [listingId],
+  );
+  if (!selected?.wallet) throw conflict("El proveedor debe vincular su wallet");
+  const amount = selected.price_mon ?? listing.budget_mon;
+  if (!amount) throw conflict("Falta definir el monto");
+  return {
+    provider: selected.wallet,
+    amountMon: trimMon(amount),
+    deadlineDays: selected.days ?? listing.deadline_days,
+    rulesHash: listing.rules_hash,
+    description: onChainDescription(listing.title, listing.description),
   };
 }
