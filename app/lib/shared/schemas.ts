@@ -1,9 +1,17 @@
 import { z } from "zod";
+import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
 
 export const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Hash de transacción inválido");
 
 export const uuidSchema = z.string().uuid();
+
+export const oauthProviderSchema = z.enum(OAUTH_PROVIDERS);
+
+export const linkWalletSchema = z.object({
+  address: z.string().min(1).max(64),
+  signature: z.string().min(1).max(200),
+});
 
 export const purchaseCreditsSchema = z.object({ txHash: txHashSchema });
 

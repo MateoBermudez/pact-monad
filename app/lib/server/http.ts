@@ -20,6 +20,11 @@ export const notFound = (what = "resource") => new ApiError(404, "not_found", `$
 export const forbidden = (message = "No tienes permiso para esto") => new ApiError(403, "forbidden", message);
 export const conflict = (message: string) => new ApiError(409, "conflict", message);
 
+export function requireWallet(user: SessionUser): string {
+  if (!user.wallet) throw new ApiError(409, "wallet_required", "Vincula una wallet para operar en la cadena");
+  return user.wallet;
+}
+
 const UNIQUE_VIOLATION = "23505";
 const CHECK_VIOLATION = "23514";
 const FOREIGN_KEY_VIOLATION = "23503";

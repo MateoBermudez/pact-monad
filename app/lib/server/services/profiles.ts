@@ -14,7 +14,7 @@ import type { UpdateProfileInput } from "@/lib/shared/schemas";
 
 type UserRow = {
   id: string;
-  wallet: string;
+  wallet: string | null;
   display_name: string | null;
   headline: string | null;
   bio: string | null;

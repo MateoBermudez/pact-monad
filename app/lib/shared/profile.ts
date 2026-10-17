@@ -23,7 +23,7 @@ export type PortfolioItemDto = {
 
 export type ProfileDto = {
   id: string;
-  wallet: string;
+  wallet: string | null;
   displayName: string | null;
   headline: string | null;
   bio: string | null;

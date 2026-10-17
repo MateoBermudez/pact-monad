@@ -4,7 +4,7 @@ import { parseEther } from "ethers";
 import { getProvider } from "@/lib/server/chain/provider";
 import { query, withTransaction } from "@/lib/server/db";
 import { serverEnv } from "@/lib/server/env";
-import { ApiError, conflict } from "@/lib/server/http";
+import { ApiError, conflict, requireWallet } from "@/lib/server/http";
 import type { SessionUser } from "@/lib/shared/auth";
 import { CREDIT_COSTS, type CreditAction, type CreditsSummary } from "@/lib/shared/credits";
 
@@ -67,7 +67,7 @@ export async function purchaseCredits(user: SessionUser, txHash: string): Promis
   if (tx.to?.toLowerCase() !== serverEnv.treasuryAddress) {
     throw new ApiError(422, "wrong_recipient", "El pago no fue a la tesorería de PACT");
   }
-  if (tx.from.toLowerCase() !== user.wallet) {
+  if (tx.from.toLowerCase() !== requireWallet(user)) {
     throw new ApiError(403, "wrong_sender", "El pago salió de una wallet distinta a la de tu sesión");
   }
 
