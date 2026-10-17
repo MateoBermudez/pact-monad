@@ -99,6 +99,26 @@ export function authed<P extends Params = Params>(handler: AuthedHandler<P>) {
   };
 }
 
+type OptionalHandler<P extends Params> = (args: { request: Request; params: P; user: SessionUser | null }) => Promise<unknown>;
+
+// Lecturas públicas: con sesión se personalizan (recomendaciones, "mi postulación"), sin ella funcionan igual.
+export function optional<P extends Params = Params>(handler: OptionalHandler<P>) {
+  return async (request: Request, context: RouteHandlerContext<P>): Promise<Response> => {
+    try {
+      const user = await getSessionUser();
+      return asResponse(await handler({ request, params: await context.params, user }));
+    } catch (error) {
+      unstable_rethrow(error);
+      return toResponse(error);
+    }
+  };
+}
+
+// Las claves de API sirven para operar, no para emitir más credenciales: eso exige la wallet.
+export function requireWalletSession(user: SessionUser): void {
+  if (user.via !== "session") throw forbidden("Esto solo se puede hacer con sesión de wallet, no con una clave de API");
+}
+
 export function open<P extends Params = Params>(handler: OpenHandler<P>) {
   return async (request: Request, context: RouteHandlerContext<P>): Promise<Response> => {
     try {

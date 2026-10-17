@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "node --env-file=.env.local db/migrate.mts"
+    "db:migrate": "node --env-file=.env.local db/migrate.mts",
+    "test": "node --test lib/shared/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

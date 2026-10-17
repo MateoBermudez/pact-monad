@@ -86,10 +86,12 @@ async function loadFile(fileId: string): Promise<FileRow> {
   return row;
 }
 
-// El dueño siempre; el portafolio es visible para cualquier usuario con sesión; el brief de una solicitud abierta,
-// para quien pueda ver la solicitud.
-async function canRead(userId: string, file: FileRow): Promise<boolean> {
-  if (file.owner_id === userId || file.purpose === "portfolio") return true;
+// El portafolio es público (así se puede explorar sin iniciar sesión); el dueño siempre ve lo suyo; el brief de una
+// solicitud abierta, cualquier usuario con sesión; la evidencia, solo las partes del acuerdo.
+async function canRead(userId: string | null, file: FileRow): Promise<boolean> {
+  if (file.purpose === "portfolio") return true;
+  if (!userId) return false;
+  if (file.owner_id === userId) return true;
   if (file.purpose === "brief") {
     const [listing] = await query<{ id: string }>(
       "select id from listings where brief_file_id = $1 and status in ('open', 'selecting', 'awarded')",
@@ -105,9 +107,11 @@ async function canRead(userId: string, file: FileRow): Promise<boolean> {
   return Boolean(party);
 }
 
-export async function getSignedFileUrl(userId: string, fileId: string): Promise<{ url: string; file: FileDto }> {
+export async function getSignedFileUrl(userId: string | null, fileId: string): Promise<{ url: string; file: FileDto }> {
   const file = await loadFile(fileId);
-  if (!(await canRead(userId, file))) throw forbidden("No tienes acceso a este archivo");
+  if (!(await canRead(userId, file))) {
+    throw userId ? forbidden("No tienes acceso a este archivo") : new ApiError(401, "unauthenticated", "Inicia sesión para ver este archivo");
+  }
   return { url: await signObjectUrl(file.storage_path), file: toDto(file) };
 }
 

@@ -5,6 +5,7 @@ import { normalizeKeywords } from "@/lib/shared/keywords";
 import type {
   PortfolioItemDto,
   ProfileDto,
+  ProviderSummaryDto,
   PublicProfileDto,
   ReputationDto,
   SkillDto,
@@ -22,7 +23,7 @@ type UserRow = {
   is_agent: boolean;
 };
 
-type ReputationRow = {
+export type ReputationRow = {
   provider_ratings: string;
   provider_avg: string | null;
   provider_score: string;
@@ -143,4 +144,47 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
     }
   });
   return loadProfile(userId);
+}
+
+export async function loadProviderSummaries(userIds: string[]): Promise<Map<string, ProviderSummaryDto>> {
+  const summaries = new Map<string, ProviderSummaryDto>();
+  if (userIds.length === 0) return summaries;
+
+  const [users, reputations, portfolios, skills] = await Promise.all([
+    query<UserRow>(
+      "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = any($1::uuid[])",
+      [userIds],
+    ),
+    query<ReputationRow & { user_id: string }>("select * from user_reputation where user_id = any($1::uuid[])", [userIds]),
+    query<{ user_id: string; n: string }>(
+      "select user_id, count(*) as n from portfolio_items where user_id = any($1::uuid[]) group by user_id",
+      [userIds],
+    ),
+    query<UserSkillDto & { user_id: string }>(
+      `select us.user_id, s.slug, s.name, s.category, us.level
+         from user_skills us join skills s on s.id = us.skill_id
+        where us.user_id = any($1::uuid[]) order by us.level desc, s.name`,
+      [userIds],
+    ),
+  ]);
+
+  const reputationByUser = new Map(reputations.map((row) => [row.user_id, row]));
+  const portfolioByUser = new Map(portfolios.map((row) => [row.user_id, Number(row.n)]));
+
+  for (const user of users) {
+    summaries.set(user.id, {
+      id: user.id,
+      wallet: user.wallet,
+      displayName: user.display_name,
+      headline: user.headline,
+      keywords: user.keywords,
+      isAgent: user.is_agent,
+      skills: skills
+        .filter((skill) => skill.user_id === user.id)
+        .map(({ slug, name, category, level }) => ({ slug, name, category, level })),
+      reputation: toReputation(reputationByUser.get(user.id)),
+      portfolioCount: portfolioByUser.get(user.id) ?? 0,
+    });
+  }
+  return summaries;
 }

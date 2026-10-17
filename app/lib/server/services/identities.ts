@@ -29,7 +29,7 @@ export async function signInSocial(profile: SocialProfile): Promise<SessionUser>
     [profile.authId, profile.email, profile.avatarUrl, cleanName(profile.name)],
   );
   await query("insert into ai_settings (user_id) values ($1) on conflict do nothing", [row.id]);
-  return toSessionUser(row);
+  return toSessionUser(row, "session");
 }
 
 export async function attachSocial(userId: string, profile: SocialProfile): Promise<SessionUser> {
@@ -60,7 +60,7 @@ export async function attachSocial(userId: string, profile: SocialProfile): Prom
        returning ${USER_COLUMNS}`,
       [userId, profile.authId, profile.email, profile.avatarUrl, cleanName(profile.name)],
     );
-    return toSessionUser(rows[0]);
+    return toSessionUser(rows[0], "session");
   });
 }
 
@@ -99,12 +99,13 @@ async function mergeIntoWalletAccount(client: PoolClient, social: SocialRow, wal
        display_name = coalesce(display_name, $5),
        headline = coalesce(headline, $6),
        bio = coalesce(bio, $7),
-       keywords = case when cardinality(keywords) = 0 then $8::text[] else keywords end
+       keywords = case when cardinality(keywords) = 0 then $8::text[] else keywords end,
+       username = coalesce(username, $9)
      where id = $1
      returning ${USER_COLUMNS}`,
-    [walletUserId, social.auth_id, social.email, social.avatar_url, social.display_name, social.headline, social.bio, social.keywords],
+    [walletUserId, social.auth_id, social.email, social.avatar_url, social.display_name, social.headline, social.bio, social.keywords, social.username],
   );
-  return toSessionUser(rows[0]);
+  return toSessionUser(rows[0], "session");
 }
 
 export async function linkWallet(userId: string, wallet: string, signature: string): Promise<LinkWalletResult> {
@@ -120,7 +121,7 @@ export async function linkWallet(userId: string, wallet: string, signature: stri
     const me = mine[0];
     if (!me) throw notFound("Usuario");
 
-    if (me.wallet === wallet) return { user: toSessionUser(me), merged: false };
+    if (me.wallet === wallet) return { user: toSessionUser(me, "session"), merged: false };
     if (me.wallet) throw conflict("Tu cuenta ya tiene otra wallet vinculada");
 
     const { rows: others } = await client.query<{ id: string; auth_id: string | null }>(
@@ -134,7 +135,7 @@ export async function linkWallet(userId: string, wallet: string, signature: stri
         `update users set wallet = $2 where id = $1 returning ${USER_COLUMNS}`,
         [userId, wallet],
       );
-      return { user: toSessionUser(rows[0]), merged: false };
+      return { user: toSessionUser(rows[0], "session"), merged: false };
     }
 
     if (other.auth_id) throw conflict("Esa wallet ya está vinculada a otra cuenta de PACT");
