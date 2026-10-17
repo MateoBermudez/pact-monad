@@ -27,6 +27,24 @@ const reply = (body: unknown, status = 200) =>
     }),
   );
 describe("acceso y perfil", () => {
+  it("abre la bienvenida al completar un perfil nuevo", async () => {
+    const fetcher = vi.fn((path: string, init?: RequestInit) => {
+      if (path === "/api/skills") return reply({ skills: [] });
+      if (path === "/api/profile" && !init?.method) return reply({ profile: { username: null, avatarUrl: null, roles: ["client"], skills: [], keywords: [] } });
+      if (path.startsWith("/api/username?")) return reply({ available: true, message: null });
+      return reply({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<ProfileSetup />);
+    const input = screen.getByLabelText("Nombre de usuario");
+    await waitFor(() => expect(input).toBeEnabled());
+    fireEvent.change(input, { target: { value: "nuevacuenta" } });
+    const save = screen.getByRole("button", { name: "Guardar y entrar a PACT" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/bienvenida"));
+    expect(fetcher.mock.calls.some(([path, init]) => path === "/api/profile" && init?.method === "PUT")).toBe(true);
+  });
   it("no simula un acceso cuando el backend social no está disponible", async () => {
     vi.stubGlobal(
       "fetch",
@@ -86,6 +104,7 @@ describe("acceso y perfil", () => {
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({
+          avatarUrl: null,
           roles: ["client"],
           skills: [{ slug: "design", level: 4 }],
           keywords: ["Fotografía"],
@@ -132,7 +151,7 @@ describe("roles en el perfil", () => {
     fireEvent.click(save);
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
     const put = fetcher.mock.calls.find(([path, init]) => path === "/api/profile" && init?.method === "PUT");
-    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ roles: ["client"], skills: [], keywords: [] });
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ avatarUrl: null, roles: ["client"], skills: [], keywords: [] });
   });
 
   it("quien ofrece servicios no puede guardar sin ninguna habilidad", async () => {

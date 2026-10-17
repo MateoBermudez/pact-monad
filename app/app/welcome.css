@@ -1,0 +1,42 @@
+.welcome-tour { padding: 24px 0 16px; }
+.welcome-topline { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 13px; margin-bottom: 26px; }
+.welcome-topline > span, .welcome-eyebrow, .welcome-details-label { letter-spacing: .08em; font-size: 12px; font-weight: 600; }
+.welcome-topline a { display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; }
+.welcome-progress { display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; padding: 0; margin: 0 0 24px; gap: 12px; }
+.welcome-progress button { display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; padding: 12px 0; border-bottom: 2px solid #d3ddc3; font-size: 13px; }
+.welcome-progress button > span { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; border: 1px solid #a0ab8d; border-radius: 50%; }
+.welcome-progress [aria-current] button { border-color: #11150d; }
+.welcome-progress [aria-current] button > span { background: #c4f149; border-color: #11150d; }
+.welcome-content { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid #11150d; border-radius: 24px; overflow: hidden; box-shadow: 0 3px 0 #11150d; min-height: 470px; }
+.welcome-story { padding: clamp(24px, 4vw, 48px); background-color: #c4f149; background-image: linear-gradient(#11150d08 1px, transparent 1px), linear-gradient(90deg, #11150d08 1px, transparent 1px); background-size: 32px 32px; display: flex; flex-direction: column; align-items: start; }
+.welcome-icon { display: inline-flex; padding: 15px; border-radius: 20px; border: 1px solid #11150d; background: #ffffffa0; margin-bottom: 24px; transform: rotate(-5deg); }
+.welcome-eyebrow { margin: 0 0 12px; }
+.welcome-story h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.08; letter-spacing: -.025em; margin: 0 0 18px; font-weight: 700; }
+.welcome-story h1:focus { outline: none; }
+.welcome-description { font-size: 18px; line-height: 1.55; margin: 0 0 28px; }
+.welcome-trust { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: auto; }
+.welcome-trust svg { flex-shrink: 0; }
+.welcome-details { background: #fffefb; padding: clamp(24px, 3vw, 40px); display: flex; flex-direction: column; gap: 24px; }
+.welcome-details-label { color: #66704f; }
+.welcome-details article { display: flex; align-items: start; gap: 14px; }
+.welcome-check { display: inline-flex; border-radius: 50%; padding: 7px; background: #eff9d6; flex-shrink: 0; }
+.welcome-details h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.2; font-weight: 600; }
+.welcome-details p { margin: 0; color: #5d6552; font-size: 17px; line-height: 1.5; }
+.welcome-destinations { display: grid; justify-items: start; gap: 12px; padding-top: 20px; border-top: 1px solid #dce3cf; }
+.welcome-destinations .btn-primary, .welcome-destinations .btn-secondary { display: inline-flex; align-items: center; gap: 10px; }
+.welcome-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 26px; }
+.welcome-footer > span { font-size: 13px; text-align: center; color: #66704f; }
+.welcome-footer .btn-primary, .welcome-footer .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.welcome-tour button:focus-visible, .welcome-tour a:focus-visible { outline: 3px solid #526b10; outline-offset: 4px; }
+@media (max-width: 700px) {
+  .welcome-tour { padding-top: 12px; }
+  .welcome-progress { gap: 8px; }
+  .welcome-progress button { justify-content: center; }
+  .welcome-progress strong { display: none; }
+  .welcome-content { grid-template-columns: 1fr; min-height: 0; }
+  .welcome-icon { margin-bottom: 18px; padding: 10px; }
+  .welcome-description { font-size: 17px; }
+  .welcome-footer { flex-wrap: wrap; }
+  .welcome-footer > span { order: 3; width: 100%; }
+  .welcome-footer .btn-primary, .welcome-footer .btn-secondary { padding-left: 18px; padding-right: 18px; }
+}

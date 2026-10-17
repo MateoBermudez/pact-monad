@@ -15,6 +15,7 @@ import type { ProfileDto, Availability } from "@/lib/shared/profile";
 import { usePact } from "@/lib/client/pact-context";
 import { ProfileSkills } from "@/components/ProfileSkills";
 import { LocationInput } from "@/components/LocationInput";
+import { AvatarUpload } from "@/components/AvatarUpload";
 export default function Account() {
   const params = useSearchParams();
   const state = useResource<{ profile: ProfileDto }>("/api/profile");
@@ -113,6 +114,9 @@ export default function Account() {
             </section>
             <section className="workspace-card">
               <h2>Más de tu perfil</h2>
+              <Link className="workspace-link" href="/bienvenida">
+                Volver a ver la bienvenida a PACT ↗
+              </Link>
               <Link className="workspace-link" href="/perfil">
                 Nombre de usuario y habilidades ↗
               </Link>
@@ -176,6 +180,7 @@ function ProfileFields({
     profile.availability,
   );
   const [avatar, setAvatar] = useState(profile.avatarUrl ?? "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [links, setLinks] = useState(profile.links);
   const [skills, setSkills] = useState(profile.skills);
   const [keywords, setKeywords] = useState(profile.keywords);
@@ -187,6 +192,7 @@ function ProfileFields({
       className="workspace-card workspace-form"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (uploadingAvatar) return;
         setBusy(true);
         setError("");
         setFeedback("");
@@ -206,6 +212,7 @@ function ProfileFields({
             }),
           );
           setFeedback("Perfil actualizado.");
+          window.dispatchEvent(new Event("pact-profile-updated"));
           onSaved();
         } catch (e) {
           setError(messageOf(e));
@@ -259,16 +266,7 @@ function ProfileFields({
           <option value="unavailable">No disponible</option>
         </select>
       </label>
-      <label>
-        URL de tu avatar (HTTPS)
-        <input
-          type="url"
-          pattern="https://.*"
-          value={avatar}
-          maxLength={512}
-          onChange={(e) => setAvatar(e.target.value)}
-        />
-      </label>
+      <AvatarUpload value={avatar} onChange={setAvatar} onBusyChange={setUploadingAvatar} disabled={busy} />
       <fieldset>
         <legend>Tus enlaces</legend>
         {links.map((link, index) => (
@@ -332,7 +330,7 @@ function ProfileFields({
           {feedback}
         </p>
       )}
-      <button disabled={busy} className="btn-primary">
+      <button disabled={busy || uploadingAvatar} className="btn-primary">
         {busy ? "Guardando…" : "Guardar perfil"}
       </button>
     </form>

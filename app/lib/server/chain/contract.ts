@@ -34,6 +34,12 @@ export async function readAutoReleaseLimit(client: string): Promise<bigint> {
   return limit;
 }
 
+export async function readAmendmentNonce(chainAgreementId: bigint): Promise<bigint> {
+  const nonce: unknown = await readContract().amendmentNonce(chainAgreementId);
+  if (typeof nonce !== "bigint") throw new Error("Respuesta inválida de amendmentNonce");
+  return nonce;
+}
+
 export async function readMaxAutoRelease(): Promise<bigint> {
   const cap: unknown = await readContract().maxAutoRelease();
   if (typeof cap !== "bigint") throw new Error("Respuesta inválida de maxAutoRelease");

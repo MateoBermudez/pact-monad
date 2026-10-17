@@ -57,6 +57,7 @@ contract PactEscrow {
     event AgreementCancelled(uint256 indexed id, address indexed client, uint256 amount);
     event AutoReleaseLimitSet(address indexed client, uint256 limit);
     event AgentReleased(uint256 indexed id, bytes32 indexed decisionHash, uint256 amount);
+    event AmendmentsInvalidated(uint256 indexed id, address indexed by, uint256 nonce);
     event AgreementAmended(
         uint256 indexed id,
         address indexed by,
@@ -245,6 +246,17 @@ contract PactEscrow {
         emit AgreementAmended(id, msg.sender, oldAmount, newAmount, newDeadline, nonce, refund);
 
         if (refund != 0) _send(a.client, refund);
+    }
+
+    /// Revoca todas las firmas de enmienda pendientes de un acuerdo (por ejemplo, tras arrepentirse de una propuesta
+    /// que la otra parte ya aceptó pero aún no ejecutó). Lo puede pedir cualquiera de las dos partes.
+    function invalidateAmendments(uint256 id) external exists(id) {
+        Agreement storage a = _agreements[id];
+        if (msg.sender != a.client && msg.sender != a.provider) revert NotParty();
+        if (a.status != Status.Created && a.status != Status.Accepted) revert InvalidStatus(a.status);
+
+        uint256 nonce = ++amendmentNonce[id];
+        emit AmendmentsInvalidated(id, msg.sender, nonce);
     }
 
     function amendmentDigest(uint256 id, uint256 newAmount, uint64 newDeadline, uint64 expiry)

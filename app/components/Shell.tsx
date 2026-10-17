@@ -2,7 +2,7 @@
 import Image from "next/image";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   Home,
@@ -21,11 +21,11 @@ import { short, usePact } from "@/lib/client/pact-context";
 import { useHydrated } from "@/lib/client/use-hydrated";
 import { CountUp } from "@/components/Effects";
 import { NotificationBell } from "@/components/NotificationBell";
+import { CurrentUserAvatar } from "@/components/ProfileAvatar";
 
 export type HeaderVariant = "full" | "minimal" | "guest";
 
 export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
-  const router = useRouter();
   const {
     address,
     connected,
@@ -35,7 +35,6 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
     balance,
     signedIn: sessionActive,
     loading: sessionLoading,
-    logout,
   } = usePact();
   const hydrated = useHydrated();
   const loading = !hydrated || sessionLoading;
@@ -100,17 +99,6 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
             >
               <User className="h-5 w-5" />
             </Link>
-            {signedIn && (
-              <button
-                type="button"
-                aria-label="Cerrar sesión"
-                title="Cerrar sesión"
-                onClick={() => void logout().then(() => router.replace("/iniciar-sesion"))}
-                className="press rounded-full bg-primary/30 p-2"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            )}
             <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-card/80 px-4 text-xs text-muted-foreground shadow-sm ring-1 ring-border backdrop-blur">
               <span className="relative flex h-2 w-2">
                 <span
@@ -124,18 +112,19 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
               <span className="sm:hidden">Testnet</span>
             </span>
             {connected ? (
-              <div className="flex items-center gap-1 rounded-full bg-ink py-1 pl-1 pr-1 text-ink-foreground">
-                <span className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-ink ring-2 ring-primary/40" />
-                <span className="hidden px-1.5 font-mono text-xs sm:inline">
+              <div className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-1.5 text-ink-foreground">
+                <Link href="/cuenta" aria-label="Mi foto de perfil" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full [&>span]:ring-0"><CurrentUserAvatar className="h-8 w-8" /></Link>
+                <span className="hidden whitespace-nowrap font-mono text-xs sm:inline">
                   {short(address)}
                 </span>
-                <span className="rounded-full bg-primary px-2.5 py-1.5 text-xs font-bold text-ink">
+                <span className="inline-flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 text-xs font-bold text-ink">
                   <CountUp value={balance} /> MON
                 </span>
                 <button
                   onClick={() => setConnected(false)}
-                  aria-label="Desconectar"
-                  className="press rounded-full p-1.5 text-ink-foreground/60 hover:text-ink-foreground"
+                  aria-label="Cerrar sesión"
+                  title="Cerrar sesión"
+                  className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-foreground/60 hover:text-ink-foreground"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>

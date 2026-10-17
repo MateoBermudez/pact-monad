@@ -746,3 +746,8 @@
   border-color: #111;
   background: #f0facf;
 }
+
+.avatar-upload { display: grid; justify-items: start; gap: 12px; margin-bottom: 20px; }
+.avatar-upload label { display: grid; gap: 8px; width: 100%; }
+.avatar-upload input { max-width: 100%; }
+.avatar-upload small { font-size: 13px; color: #666; }

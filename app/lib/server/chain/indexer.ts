@@ -206,7 +206,101 @@ async function applyEvent(client: PoolClient, event: ChainEvent, meta: EventMeta
     }
     case "AgentReleased":
       return;
+    case "AgreementAmended":
+      await applyAmendment(client, event, meta);
+      return;
+    case "AmendmentsInvalidated": {
+      const { rows } = await client.query<{ id: string }>(
+        "select id from agreements where contract_address = $1 and chain_agreement_id = $2",
+        [meta.contract, event.id.toString()],
+      );
+      if (!rows[0]) return;
+      await client.query(
+        `update agreement_proposals set status = 'superseded', resolved_at = now()
+          where agreement_id = $1 and status in ('pending', 'accepted')`,
+        [rows[0].id],
+      );
+      await client.query(
+        "insert into agreement_messages (agreement_id, sender_id, kind, body) values ($1, null, 'system', $2)",
+        [rows[0].id, "Se revocaron las firmas pendientes: las propuestas anteriores ya no se pueden aplicar."],
+      );
+      return;
+    }
   }
+}
+
+const unixOrNull = (value: bigint) => (value === BigInt(0) ? null : Number(value));
+
+// Aplica un cambio de importe/plazo: actualiza el acuerdo, cierra la propuesta que lo originó (y deja sin efecto las
+// demás, cuyas firmas el contrato ya invalidó con el nonce), deja constancia en el chat y avisa a las dos partes.
+async function applyAmendment(client: PoolClient, event: Extract<ChainEvent, { name: "AgreementAmended" }>, meta: EventMeta): Promise<void> {
+  const deadline = unixOrNull(event.newDeadline);
+  const { rows } = await client.query<{
+    id: string;
+    client_id: string;
+    provider_id: string;
+    deadline: Date;
+    listing_id: string | null;
+    status: AgreementStatusName;
+  }>(
+    `update agreements
+        set amount_wei = $3, deadline = coalesce(to_timestamp($4::bigint), deadline)
+      where contract_address = $1 and chain_agreement_id = $2 and status in ('Created', 'Accepted')
+      returning id, client_id, provider_id, deadline, listing_id, status`,
+    [meta.contract, event.id.toString(), event.newAmount.toString(), deadline],
+  );
+  const agreement = rows[0];
+  if (!agreement) return;
+
+  const applied = await client.query(
+    `update agreement_proposals
+        set status = 'applied', applied_tx = $3, resolved_at = now()
+      where id = (select id from agreement_proposals
+                   where agreement_id = $1 and status in ('pending', 'accepted') and nonce = $2 and new_amount_wei = $4
+                     and coalesce(extract(epoch from new_deadline)::bigint, 0) = $5::bigint
+                   order by created_at desc limit 1)`,
+    [agreement.id, event.nonce.toString(), meta.txHash, event.newAmount.toString(), event.newDeadline.toString()],
+  );
+  await client.query(
+    `update agreement_proposals set status = 'superseded', resolved_at = now()
+      where agreement_id = $1 and status in ('pending', 'accepted')`,
+    [agreement.id],
+  );
+
+  const parts: string[] = [];
+  if (event.newAmount !== event.oldAmount) {
+    parts.push(`Precio actualizado: ${trimMon(formatEther(event.oldAmount))} → ${trimMon(formatEther(event.newAmount))} MON.`);
+  }
+  if (event.refunded > BigInt(0)) parts.push(`${trimMon(formatEther(event.refunded))} MON volvieron al cliente.`);
+  if (event.newAmount > event.oldAmount) {
+    parts.push(`El cliente envió ${trimMon(formatEther(event.newAmount - event.oldAmount))} MON adicionales al contrato.`);
+  }
+  if (deadline) parts.push(`Nuevo plazo: ${agreement.deadline.toISOString().slice(0, 10)}.`);
+  await client.query("insert into agreement_messages (agreement_id, sender_id, kind, body) values ($1, null, 'system', $2)", [
+    agreement.id,
+    `${applied.rowCount === 0 ? "Se aplicó un cambio desde el contrato. " : ""}${parts.join(" ")}`.trim() || "Se actualizó el acuerdo.",
+  ]);
+
+  if (meta.historical) return;
+  await emitWebhook(client, {
+    type: "agreement.amended",
+    recipients: [
+      { userId: agreement.client_id, role: "client" },
+      { userId: agreement.provider_id, role: "provider" },
+    ],
+    dedupe: `${meta.txHash}:${meta.logIndex}`,
+    data: {
+      agreementId: agreement.id,
+      chainAgreementId: event.id.toString(),
+      contractAddress: meta.contract,
+      listingId: agreement.listing_id,
+      amountMon: trimMon(formatEther(event.newAmount)),
+      status: agreement.status,
+      oldAmountMon: trimMon(formatEther(event.oldAmount)),
+      refundedMon: trimMon(formatEther(event.refunded)),
+      deadline: agreement.deadline.toISOString(),
+    },
+  });
 }
 
 async function runSync(): Promise<SyncResult> {

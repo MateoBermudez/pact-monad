@@ -52,6 +52,31 @@ const item = (overrides: Partial<NotificationDto> = {}): NotificationDto => ({
 });
 
 describe("campanita de notificaciones", () => {
+  it("cierra al pulsar fuera, mantiene los clics dentro y permite reabrir", () => {
+    render(<><button>Fuera</button><NotificationBell /></>);
+    const bell = screen.getByRole("button", { name: "Notificaciones" });
+    fireEvent.click(bell);
+    fireEvent.pointerDown(screen.getByRole("dialog"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Fuera" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(bell);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.pointerDown(bell);
+    fireEvent.click(bell);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("Escape cierra y devuelve el foco a la campana", () => {
+    render(<NotificationBell />);
+    const bell = screen.getByRole("button", { name: "Notificaciones" });
+    fireEvent.click(bell);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(bell).toHaveFocus();
+  });
+
   it("no aparece sin sesión", () => {
     state.signedIn = false;
     render(<NotificationBell />);

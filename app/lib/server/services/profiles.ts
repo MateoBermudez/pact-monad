@@ -1,4 +1,6 @@
 import "server-only";
+import { requireOwnedFile } from "@/lib/server/services/files";
+import { AVATAR_PATH, AVATAR_MIME_TYPES, AVATAR_MAX_BYTES } from "@/lib/shared/avatar";
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "@/lib/server/db";
 import { ApiError, notFound } from "@/lib/server/http";
@@ -146,6 +148,13 @@ async function assertRolesRemovable(client: PoolClient, userId: string, removed:
 }
 
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileDto> {
+  const avatarId = input.avatarUrl?.match(AVATAR_PATH)?.[1];
+  if (avatarId) {
+    const file = await requireOwnedFile(userId, avatarId, "portfolio");
+    if (!AVATAR_MIME_TYPES.includes(file.mime_type) || Number(file.size_bytes) > AVATAR_MAX_BYTES) {
+      throw new ApiError(400, "invalid_avatar", "La foto debe ser JPG, PNG o WebP de hasta 2 MB.");
+    }
+  }
   await withTransaction(async (client) => {
     const { rows } = await client.query<UserRow>(
       `select ${PROFILE_COLUMNS} from users where id = $1 for update`,

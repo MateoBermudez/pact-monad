@@ -19,7 +19,7 @@ function Shell({ children }: { children: ReactNode }) {
   const hydrated = useHydrated();
   const onboarding =
     (isPublicPath(pathname) && pathname !== LANDING_PATH) ||
-    pathname === ONBOARDING_PATH;
+    pathname === ONBOARDING_PATH || pathname === "/bienvenida";
   const onLanding = pathname === LANDING_PATH;
   const sessionKnown = hydrated && !loading;
   const guestLanding = onLanding && sessionKnown && !signedIn;

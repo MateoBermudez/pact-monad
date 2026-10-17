@@ -99,6 +99,9 @@ Todas devuelven JSON. Errores: `{ "error": código, "message": texto }`. **Sesi�
 | `POST /api/agreements/prepare` | sí | Congela condiciones y proveedor directo; devuelve los parámetros para firmar createAgreement |
 | `POST /api/agreements/[id]/review` | sí | La IA revisa la entrega; con `{ "release": true }` paga si el límite on-chain lo permite |
 | `POST /api/agreements/[id]/rating` | sí | Calificar a la contraparte de un acuerdo aprobado |
+| `GET/POST /api/agreements/[id]/messages` | sí | Chat del acuerdo (solo las dos partes): leer la conversación / enviar un mensaje (máx. 30 por minuto) |
+| `POST /api/agreements/[id]/proposals/prepare` → firmar → `POST …/proposals` | sí | Proponer un nuevo precio y/o plazo: el servidor devuelve lo que se firma (EIP-712, sin gas) y luego guarda la propuesta firmada |
+| `POST …/proposals/[pid]/accept` · `/reject` · `/withdraw` | sí | Aceptar (libera la firma a quien ejecuta; si el cliente sube el precio, el proveedor firma) / rechazar / retirar |
 | `GET /api/dashboard` | sí | Panel financiero: bloqueado, pagado, recibido, saldo, historial |
 | `GET /api/stream` | sí | Tiempo real (SSE): avisa con `change` cuando algo tuyo cambió; se vuelve a pedir `/api/dashboard` |
 | `GET /api/credits` · `POST /api/credits/purchase` | sí | Créditos de IA / acreditar un pago en MON hecho a la tesorería |
@@ -126,6 +129,28 @@ El indexador (`lib/server/chain/indexer.ts`) lee los eventos de `PactEscrow` en 
 Monad) y los copia a Supabase de forma idempotente. Varias instancias pueden correr a la vez: cada tramo se reserva con una
 escritura condicional sobre `last_block`. `/api/stream` consulta una huella barata cada 2 s y avisa al navegador cuando cambia.
 
+## Renegociar un acuerdo en curso (chat)
+
+Cada acuerdo tiene un chat entre cliente y proveedor (también para agentes con clave de API). Mientras no haya entrega
+se puede **proponer un nuevo precio y/o plazo**; la propuesta se distingue de un mensaje normal y la otra parte puede
+**aceptar, rechazar o contraofertar** (una propuesta nueva reemplaza a la vigente). Las wallets de las dos partes ya
+están enlazadas al acuerdo, así que nadie escribe direcciones: al aceptar, el cambio se aplica en el contrato.
+
+- **Cómo se aplica.** Una parte firma la propuesta (EIP-712, sin gas) y la otra la presenta con `amendAgreement`. Si el
+  importe **baja**, la diferencia vuelve al cliente en la misma transacción (por ejemplo, pagó 50 y baja a 40: reciben 10).
+  Si **sube**, el cliente envía la diferencia en esa transacción. El monto bloqueado siempre coincide con el acuerdo.
+- **Quién hace qué.** Propone el proveedor (o baja el precio el cliente): quien acepta envía la transacción. Si el
+  cliente sube el precio, el proveedor acepta firmando y el cliente envía la transacción con los fondos extra.
+- **Seguridad.** La firma de quien propone solo se entrega a la otra parte cuando acepta; retirar o rechazar antes surte
+  efecto. Cada enmienda aplicada sube el `nonce` del acuerdo e invalida las demás firmas; `invalidateAmendments` permite
+  anular firmas ya aceptadas pero sin ejecutar. Las propuestas vencen (72 h por defecto, máximo 7 días). Los mensajes
+  son de solo suma. El límite de pago autónomo del agente se evalúa con el importe ya enmendado.
+- **Agentes.** `GET /api/agreements/{id}/messages` trae cada propuesta con su `execution` (qué enviar, con qué firma y
+  cuántos fondos) cuando le toca ejecutarla. Los avisos `proposal.created` y `proposal.accepted` dicen en `nextAction`
+  si le toca actuar. Un agente firma con su propia wallet (`signTypedData`) y envía él mismo la transacción.
+- Código: `contracts/src/PactEscrow.sol` (`amendAgreement`), `lib/server/services/chat.ts`, `lib/shared/amendment.ts`,
+  `components/AgreementChat.tsx`, migración `016_agreement_chat.sql`.
+
 ## Webhooks: avisar a quien le toca actuar
 
 Las personas y, sobre todo, los **agentes** registran una URL (`POST /api/webhooks`) y reciben un aviso firmado cuando algo
@@ -143,7 +168,8 @@ les toca, en lugar de estar preguntando. Cada aviso dice **qué sigue y quién l
 
 Un agente solo reacciona cuando `nextAction.youAct` es `true`. Eventos: `application.received` · `application.selected` ·
 `application.rejected` · `agreement.created` · `agreement.accepted` · `agreement.delivered` · `agreement.approved` ·
-`agreement.cancelled` · `decision.created` · `ping`. Se pueden filtrar al registrar el webhook (vacío = todos).
+`agreement.cancelled` · `agreement.message` · `proposal.created` · `proposal.accepted` · `proposal.rejected` ·
+`agreement.amended` · `decision.created` · `ping`. Se pueden filtrar al registrar el webhook (vacío = todos).
 
 **Verifica siempre la firma.** Cabeceras: `X-Pact-Signature: t=<segundos>,v1=<hmac>`, `X-Pact-Event`, `X-Pact-Delivery`.
 La firma es HMAC-SHA256 de `"<t>.<cuerpo exacto>"` con el secreto del webhook. Rechaza mensajes con `t` de hace más de

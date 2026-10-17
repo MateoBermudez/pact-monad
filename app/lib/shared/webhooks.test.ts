@@ -45,3 +45,25 @@ describe("nextActionFor", () => {
     assert.equal(new Set(WEBHOOK_EVENTS).size, WEBHOOK_EVENTS.length);
   });
 });
+
+describe("renegociación en el chat", () => {
+  it("una propuesta le toca responderla a la contraparte de quien la hizo", () => {
+    const data = { proposerRole: "provider" };
+    assert.equal(nextActionFor("proposal.created", "client", data).youAct, true);
+    assert.equal(nextActionFor("proposal.created", "client", data).action, "respond_to_proposal");
+    assert.equal(nextActionFor("proposal.created", "provider", data).youAct, false);
+  });
+
+  it("al aceptarse, solo quien debe enviar la transacción reacciona", () => {
+    assert.equal(nextActionFor("proposal.accepted", "client", { executor: "client" }).youAct, true);
+    assert.equal(nextActionFor("proposal.accepted", "provider", { executor: "client" }).youAct, false);
+    assert.equal(nextActionFor("proposal.accepted", "provider", { executor: "provider" }).youAct, true);
+  });
+
+  it("mensajes, rechazos y cambios aplicados son informativos", () => {
+    for (const type of ["agreement.message", "proposal.rejected", "agreement.amended"] as const) {
+      assert.equal(nextActionFor(type, "client").youAct, false);
+      assert.ok(WEBHOOK_EVENTS.includes(type));
+    }
+  });
+});

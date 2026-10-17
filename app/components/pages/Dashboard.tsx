@@ -18,6 +18,7 @@ import {
 } from "@/lib/client/pact-context";
 import { isActive, needsAction } from "@/lib/shared/ui-pact";
 import { CountUp } from "@/components/Effects";
+import { CurrentUserAvatar } from "@/components/ProfileAvatar";
 
 const FILTERS = [
   "Todos",
@@ -55,7 +56,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-ink ring-2 ring-card" />
+          <Link href="/cuenta" aria-label="Cambiar mi foto de perfil"><CurrentUserAvatar /></Link>
           <div>
             <p className="text-xs text-muted-foreground">
               Bienvenido de vuelta 👋
