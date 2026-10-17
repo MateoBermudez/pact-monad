@@ -43,6 +43,18 @@ El cliente decide cuánto confía en el agente. **El límite se hace cumplir aqu
 - **Sin `receive`/`fallback`.** El contrato solo recibe MON por `createAgreement`.
 - **Errores personalizados y eventos** en cada transición, para que el frontend, el indexador y el explorer reconstruyan el historial.
 
+## Renegociar un acuerdo en curso (`amendAgreement`)
+
+Mientras no haya entrega (`Created` o `Accepted`), las partes pueden cambiar el importe y/o el plazo sin cancelar:
+
+- Una parte **firma** la propuesta (EIP-712, `Amendment(id, newAmount, newDeadline, nonce, expiry)`, sin gas) y la **otra
+  la presenta** con `amendAgreement(id, newAmount, newDeadline, expiry, firma)`. `newDeadline = 0` conserva el plazo.
+- **Si el importe sube**, lo presenta el cliente y envía exactamente la diferencia (`msg.value`).
+- **Si el importe baja**, la diferencia vuelve al cliente en la misma transacción.
+- El `nonce` es por acuerdo: cada enmienda aplicada invalida las demás firmas pendientes y no se pueden repetir.
+- `amendmentDigest(id, newAmount, newDeadline, expiry)` devuelve el hash exacto que hay que firmar.
+- El límite de pago autónomo del agente se evalúa con el importe ya enmendado.
+
 ## Despliegue actual (Monad Testnet)
 
 | | |
@@ -61,7 +73,7 @@ Los datos completos están en [`deployments/monad-testnet.json`](deployments/mon
 
 ```sh
 forge build
-forge test            # 53 pruebas, incluye fuzzing y reentrada
+forge test            # 83 pruebas, incluye fuzzing y reentrada
 forge test -vvv       # con trazas
 forge test --gas-report
 
