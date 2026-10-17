@@ -3,12 +3,13 @@ import type { PoolClient } from "pg";
 import { consumeChallenge, toSessionUser, USER_COLUMNS, type UserRow } from "@/lib/server/auth";
 import { query, withTransaction } from "@/lib/server/db";
 import { ApiError, conflict, notFound } from "@/lib/server/http";
-import type { SessionUser } from "@/lib/shared/auth";
+import type { IdentityDto, SessionUser } from "@/lib/shared/auth";
 
 const DISPLAY_NAME_MAX = 60;
 
 export type SocialProfile = {
   authId: string;
+  provider: string;
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
@@ -18,50 +19,87 @@ export type LinkWalletResult = { user: SessionUser; merged: boolean };
 
 const cleanName = (name: string | null) => (name ? name.trim().slice(0, DISPLAY_NAME_MAX) || null : null);
 
-export async function signInSocial(profile: SocialProfile): Promise<SessionUser> {
-  const [row] = await query<UserRow>(
-    `insert into users (auth_id, email, avatar_url, display_name) values ($1, $2, $3, $4)
-     on conflict (auth_id) do update set
-       email = coalesce(excluded.email, users.email),
-       avatar_url = coalesce(excluded.avatar_url, users.avatar_url),
-       display_name = coalesce(users.display_name, excluded.display_name)
+const lockIdentity = (client: PoolClient, authId: string) =>
+  client.query("select pg_advisory_xact_lock(hashtext($1))", [authId]);
+
+async function fillProfile(client: PoolClient, userId: string, profile: SocialProfile): Promise<SessionUser> {
+  const { rows } = await client.query<UserRow>(
+    `update users set
+       email = coalesce(email, $2),
+       avatar_url = coalesce(avatar_url, $3),
+       display_name = coalesce(display_name, $4)
+     where id = $1
      returning ${USER_COLUMNS}`,
-    [profile.authId, profile.email, profile.avatarUrl, cleanName(profile.name)],
+    [userId, profile.email, profile.avatarUrl, cleanName(profile.name)],
   );
-  await query("insert into ai_settings (user_id) values ($1) on conflict do nothing", [row.id]);
-  return toSessionUser(row, "session");
+  return toSessionUser(rows[0], "session");
+}
+
+export async function signInSocial(profile: SocialProfile): Promise<SessionUser> {
+  return withTransaction(async (client) => {
+    await lockIdentity(client, profile.authId);
+
+    const { rows: known } = await client.query<{ user_id: string }>(
+      "select user_id from user_identities where auth_id = $1",
+      [profile.authId],
+    );
+    if (known[0]) return fillProfile(client, known[0].user_id, profile);
+
+    const { rows: created } = await client.query<{ id: string }>(
+      "insert into users (email, avatar_url, display_name) values ($1, $2, $3) returning id",
+      [profile.email, profile.avatarUrl, cleanName(profile.name)],
+    );
+    const userId = created[0].id;
+    await client.query("insert into user_identities (auth_id, user_id, provider, email) values ($1, $2, $3, $4)", [
+      profile.authId,
+      userId,
+      profile.provider,
+      profile.email,
+    ]);
+    await client.query("insert into ai_settings (user_id) values ($1) on conflict do nothing", [userId]);
+    return fillProfile(client, userId, profile);
+  });
 }
 
 export async function attachSocial(userId: string, profile: SocialProfile): Promise<SessionUser> {
   return withTransaction(async (client) => {
-    const { rows: mine } = await client.query<{ auth_id: string | null }>(
-      "select auth_id from users where id = $1 for update",
-      [userId],
+    await lockIdentity(client, profile.authId);
+
+    const { rows: mine } = await client.query("select 1 from users where id = $1 for update", [userId]);
+    if (mine.length === 0) throw notFound("Usuario");
+
+    const { rows: owner } = await client.query<{ user_id: string }>(
+      "select user_id from user_identities where auth_id = $1",
+      [profile.authId],
     );
-    if (!mine[0]) throw notFound("Usuario");
-    if (mine[0].auth_id && mine[0].auth_id !== profile.authId) {
-      throw conflict("Tu cuenta ya tiene otro inicio de sesión social vinculado");
+    if (owner[0] && owner[0].user_id !== userId) {
+      throw conflict(`Esa cuenta de ${profile.provider} ya pertenece a otro usuario de PACT`);
     }
 
-    const { rows: owner } = await client.query<{ id: string }>("select id from users where auth_id = $1", [
-      profile.authId,
-    ]);
-    if (owner[0] && owner[0].id !== userId) {
-      throw conflict("Esa cuenta de Google o GitHub ya pertenece a otro usuario de PACT");
-    }
+    if (!owner[0]) {
+      const { rows: sameProvider } = await client.query(
+        "select 1 from user_identities where user_id = $1 and provider = $2",
+        [userId, profile.provider],
+      );
+      if (sameProvider.length > 0) throw conflict(`Ya tienes una cuenta de ${profile.provider} vinculada`);
 
-    const { rows } = await client.query<UserRow>(
-      `update users set
-         auth_id = $2,
-         email = coalesce(email, $3),
-         avatar_url = coalesce(avatar_url, $4),
-         display_name = coalesce(display_name, $5)
-       where id = $1
-       returning ${USER_COLUMNS}`,
-      [userId, profile.authId, profile.email, profile.avatarUrl, cleanName(profile.name)],
-    );
-    return toSessionUser(rows[0], "session");
+      await client.query("insert into user_identities (auth_id, user_id, provider, email) values ($1, $2, $3, $4)", [
+        profile.authId,
+        userId,
+        profile.provider,
+        profile.email,
+      ]);
+    }
+    return fillProfile(client, userId, profile);
   });
+}
+
+export async function listIdentities(userId: string): Promise<IdentityDto[]> {
+  const rows = await query<{ provider: string; email: string | null; created_at: Date }>(
+    "select provider, email, created_at from user_identities where user_id = $1 order by created_at",
+    [userId],
+  );
+  return rows.map((row) => ({ provider: row.provider, email: row.email, linkedAt: row.created_at.toISOString() }));
 }
 
 async function hasActivity(client: PoolClient, userId: string): Promise<boolean> {
@@ -80,9 +118,10 @@ async function hasActivity(client: PoolClient, userId: string): Promise<boolean>
   return rows[0].active;
 }
 
-type SocialRow = UserRow & { auth_id: string | null; headline: string | null; bio: string | null; keywords: string[] };
+type SocialRow = UserRow & { headline: string | null; bio: string | null; keywords: string[] };
 
 async function mergeIntoWalletAccount(client: PoolClient, social: SocialRow, walletUserId: string): Promise<SessionUser> {
+  await client.query("update user_identities set user_id = $2 where user_id = $1", [social.id, walletUserId]);
   await client.query(
     `insert into user_skills (user_id, skill_id, level)
      select $2, skill_id, level from user_skills where user_id = $1
@@ -93,17 +132,16 @@ async function mergeIntoWalletAccount(client: PoolClient, social: SocialRow, wal
 
   const { rows } = await client.query<UserRow>(
     `update users set
-       auth_id = $2,
-       email = coalesce(email, $3),
-       avatar_url = coalesce(avatar_url, $4),
-       display_name = coalesce(display_name, $5),
-       headline = coalesce(headline, $6),
-       bio = coalesce(bio, $7),
-       keywords = case when cardinality(keywords) = 0 then $8::text[] else keywords end,
-       username = coalesce(username, $9)
+       email = coalesce(email, $2),
+       avatar_url = coalesce(avatar_url, $3),
+       display_name = coalesce(display_name, $4),
+       headline = coalesce(headline, $5),
+       bio = coalesce(bio, $6),
+       keywords = case when cardinality(keywords) = 0 then $7::text[] else keywords end,
+       username = coalesce(username, $8)
      where id = $1
      returning ${USER_COLUMNS}`,
-    [walletUserId, social.auth_id, social.email, social.avatar_url, social.display_name, social.headline, social.bio, social.keywords, social.username],
+    [walletUserId, social.email, social.avatar_url, social.display_name, social.headline, social.bio, social.keywords, social.username],
   );
   return toSessionUser(rows[0], "session");
 }
@@ -115,7 +153,7 @@ export async function linkWallet(userId: string, wallet: string, signature: stri
 
   return withTransaction(async (client) => {
     const { rows: mine } = await client.query<SocialRow>(
-      `select ${USER_COLUMNS}, auth_id, headline, bio, keywords from users where id = $1 for update`,
+      `select ${USER_COLUMNS}, headline, bio, keywords from users where id = $1 for update`,
       [userId],
     );
     const me = mine[0];
@@ -124,8 +162,9 @@ export async function linkWallet(userId: string, wallet: string, signature: stri
     if (me.wallet === wallet) return { user: toSessionUser(me, "session"), merged: false };
     if (me.wallet) throw conflict("Tu cuenta ya tiene otra wallet vinculada");
 
-    const { rows: others } = await client.query<{ id: string; auth_id: string | null }>(
-      "select id, auth_id from users where wallet = $1 for update",
+    const { rows: others } = await client.query<{ id: string; has_identity: boolean }>(
+      `select id, exists (select 1 from user_identities i where i.user_id = users.id) as has_identity
+         from users where wallet = $1 for update`,
       [wallet],
     );
     const other = others[0];
@@ -138,7 +177,7 @@ export async function linkWallet(userId: string, wallet: string, signature: stri
       return { user: toSessionUser(rows[0], "session"), merged: false };
     }
 
-    if (other.auth_id) throw conflict("Esa wallet ya está vinculada a otra cuenta de PACT");
+    if (other.has_identity) throw conflict("Esa wallet ya está vinculada a otra cuenta de PACT");
     if (await hasActivity(client, userId)) {
       throw conflict("Tu cuenta ya tiene actividad y esa wallet también; no se pueden unir automáticamente");
     }

@@ -23,3 +23,9 @@ export type AgentKeyDto = {
   expiresAt: string | null;
   revokedAt: string | null;
 };
+
+export type IdentityDto = {
+  provider: string;
+  email: string | null;
+  linkedAt: string;
+};
