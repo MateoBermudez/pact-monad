@@ -1,4 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  connectMetaMask,
+  getChainId,
+  getEthereum,
+  getWalletBalanceMon,
+  MONAD_CHAIN_ID,
+  switchToMonadTestnet,
+} from "@/lib/wallet";
 
 export const CLIENT = "0x71C0a9b2c4d1e8f3a6b5c7d9e0f1a2b3c4d528E4";
 export const PROVIDER = "0x3DE8b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6fA88";
@@ -32,6 +40,8 @@ const SEED: Pact[] = [
 export type Incoming = { key: number; amount: number; from: string; title: string };
 
 type Demo = {
+  /** Active wallet address (real MetaMask address when connected). */
+  address: string;
   /** Wallet balance in MON. */
   balance: number;
   incoming: Incoming | null;
@@ -40,6 +50,10 @@ type Demo = {
   receive: (amount: number, from: string, title: string, createPact?: boolean) => void;
   connected: boolean;
   setConnected: (v: boolean) => void;
+  /** Connects real MetaMask wallet and switches to Monad Testnet. */
+  connectWallet: () => Promise<string>;
+  /** Switches real MetaMask network to Monad Testnet. */
+  switchNetwork: () => Promise<void>;
   wrongNetwork: boolean;
   setWrongNetwork: (v: boolean) => void;
   aiFail: boolean;
@@ -63,6 +77,7 @@ export const aiCanRelease = (amount: number, autoApprove: boolean, limit: number
 const Ctx = createContext<Demo | null>(null);
 
 export function DemoProvider({ children }: { children: ReactNode }) {
+  const [address, setAddress] = useState(CLIENT);
   const [connected, setConnected] = useState(false);
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [aiFail, setAiFail] = useState(false);
@@ -72,6 +87,85 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(120);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const keyRef = useRef(0);
+
+  const connectWallet = useCallback(async () => {
+    const res = await connectMetaMask();
+    setAddress(res.address);
+    setConnected(true);
+    setWrongNetwork(res.chainId !== MONAD_CHAIN_ID);
+    setBalance(res.balance);
+    return res.address;
+  }, []);
+
+  const switchNetwork = useCallback(async () => {
+    const ethereum = getEthereum();
+    if (!ethereum) {
+      setWrongNetwork(false);
+      return;
+    }
+    await switchToMonadTestnet(ethereum);
+    const cid = await getChainId(ethereum);
+    setWrongNetwork(cid !== null && cid !== MONAD_CHAIN_ID);
+    if (address) {
+      const bal = await getWalletBalanceMon(address, ethereum);
+      setBalance(bal);
+    }
+  }, [address]);
+
+  // Sync with real MetaMask accounts and chain on mount + events
+  useEffect(() => {
+    const ethereum = getEthereum();
+    if (!ethereum) return;
+
+    let active = true;
+    (async () => {
+      try {
+        const accounts = (await ethereum.request({ method: "eth_accounts" })) as string[];
+        const acc = accounts?.[0];
+        if (!active || !acc) return;
+        setAddress(acc);
+        setConnected(true);
+        const cid = await getChainId(ethereum);
+        if (active && cid !== null) {
+          setWrongNetwork(cid !== MONAD_CHAIN_ID);
+        }
+        const bal = await getWalletBalanceMon(acc, ethereum);
+        if (active) {
+          setBalance(bal);
+        }
+      } catch {
+        // Ignore silent probe errors
+      }
+    })();
+
+    const onAccountsChanged = (accounts: unknown) => {
+      const list = Array.isArray(accounts) ? (accounts as string[]) : [];
+      const acc = list[0];
+      if (!acc) {
+        setConnected(false);
+        setAddress(CLIENT);
+        return;
+      }
+      setAddress(acc);
+      setConnected(true);
+      void getWalletBalanceMon(acc, ethereum).then(setBalance);
+    };
+
+    const onChainChanged = (chainIdHex: unknown) => {
+      if (typeof chainIdHex === "string") {
+        const cid = Number.parseInt(chainIdHex, 16);
+        setWrongNetwork(cid !== MONAD_CHAIN_ID);
+      }
+    };
+
+    ethereum.on?.("accountsChanged", onAccountsChanged);
+    ethereum.on?.("chainChanged", onChainChanged);
+    return () => {
+      active = false;
+      ethereum.removeListener?.("accountsChanged", onAccountsChanged);
+      ethereum.removeListener?.("chainChanged", onChainChanged);
+    };
+  }, []);
 
   const dismissIncoming = useCallback(() => setIncoming(null), []);
   const receive: Demo["receive"] = useCallback((amount, from, title, createPact = true) => {
@@ -87,18 +181,11 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     try { navigator.vibrate?.([30, 40, 30]); } catch { /* not supported */ }
   }, []);
 
-  // Once the wallet connects, a payment lands a few seconds later, as if a client had just approved.
-  useEffect(() => {
-    if (!connected) return;
-    const t = setTimeout(() => receive(12, "0x9A1f4e2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7E21", "Banner para campaña de verano"), 9000);
-    return () => clearTimeout(t);
-  }, [connected, receive]);
-
   const addPact: Demo["addPact"] = (p) => {
     const id = String(Math.max(0, ...pacts.map((x) => Number(x.id))) + 1);
     const createdAt = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
     setPacts((prev) => [{ ...p, id, createdAt, status: "Creado", role: "cliente" }, ...prev]);
-    setBalance((b) => Math.max(0, +(b - p.amount).toFixed(2)));
+    setBalance((b) => Math.max(0, +(b - p.amount).toFixed(4)));
     return id;
   };
   const updatePact: Demo["updatePact"] = (id, patch) =>
@@ -107,8 +194,26 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider
       value={{
-        connected, setConnected, wrongNetwork, setWrongNetwork, aiFail, setAiFail, pacts, addPact, updatePact,
-        aiAutoApprove, setAiAutoApprove, aiLimit, setAiLimit, balance, incoming, dismissIncoming, receive,
+        address,
+        connected,
+        setConnected,
+        connectWallet,
+        switchNetwork,
+        wrongNetwork,
+        setWrongNetwork,
+        aiFail,
+        setAiFail,
+        pacts,
+        addPact,
+        updatePact,
+        aiAutoApprove,
+        setAiAutoApprove,
+        aiLimit,
+        setAiLimit,
+        balance,
+        incoming,
+        dismissIncoming,
+        receive,
       }}
     >
       {children}

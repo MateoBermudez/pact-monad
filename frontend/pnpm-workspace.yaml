@@ -1,0 +1,5 @@
+overrides:
+  rolldown: 1.2.1
+
+allowBuilds:
+  esbuild: true

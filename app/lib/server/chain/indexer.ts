@@ -61,13 +61,20 @@ async function applyEvent(client: PoolClient, event: ChainEvent, meta: EventMeta
       const clientId = await ensureUser(client, event.client);
       const providerId = await ensureUser(client, event.provider);
 
-      const { rows: matches } = await client.query<{ listing_id: string; application_id: string }>(
+      const { rows: matches } = await client.query<{ listing_id: string; application_id: string | null }>(
         `select l.id as listing_id, a.id as application_id
            from listings l
            join applications a on a.id = l.awarded_application_id
           where l.rules_hash = $1 and l.client_id = $2 and a.provider_id = $3
+            and not exists (select 1 from agreements g where g.listing_id = l.id and g.status <> 'Cancelled')
+         union all
+         select l.id as listing_id, null::uuid as application_id
+           from listings l
+           join direct_agreement_intents d on d.listing_id = l.id and d.client_id = l.client_id
+          where l.rules_hash = $1 and l.client_id = $2 and d.provider_wallet = $4
+            and l.status = 'awarded' and l.description = $5 and l.budget_mon = $6::numeric
             and not exists (select 1 from agreements g where g.listing_id = l.id and g.status <> 'Cancelled')`,
-        [event.rulesHash, clientId, providerId],
+        [event.rulesHash, clientId, providerId, event.provider.toLowerCase(), event.description, formatEther(event.amount)],
       );
       await client.query(
         `insert into agreements (contract_address, chain_agreement_id, listing_id, application_id, client_id, provider_id,

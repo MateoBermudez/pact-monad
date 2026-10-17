@@ -2,6 +2,21 @@
 
 Next.js 16 (App Router), TypeScript estricto, ethers, Supabase (Postgres), zod.
 
+## Interfaz migrada
+
+Las páginas de PACT viven en `app/` y sus componentes interactivos en `components/pages/`. Estilos e Intropol se conservan en `app/globals.css` y `public/`. Navegación con `next/link` y `next/navigation`; no se necesita TanStack, Vite ni un proxy para acceder a la API.
+
+- `/crear`: describe, revisa las condiciones y confirma con MetaMask. El paso 2 solo cambia de vista. Al confirmar, `POST /api/agreements/prepare` guarda los términos revisados y devuelve el hash de sus reglas; después la wallet llama a `createAgreement` con el ABI real. No hay firmas simuladas como respaldo.
+- `/dashboard` y `/pact/[id]`: acuerdos reales desde la API, con avisos de actualización en `/api/stream`.
+- `/configuracion`: consulta el límite y tope reales. Los cambios requieren una transacción `setAutoReleaseLimit` firmada por el cliente.
+- `/conectar`: nonce del servidor, firma y verificación; restaura y cierra la sesión mediante las rutas existentes.
+
+Aplicar `008_direct_agreements.sql` con `pnpm db:migrate` antes de crear acuerdos con proveedor directo. No modifica migraciones anteriores ni simula postulaciones de proveedores. Las reglas se congelan antes de firmar; rechazar una firma permite reintentar con las mismas condiciones, o editar y preparar otro borrador.
+
+Configurar `.env.local` según `.env.example`: Supabase, IA y contrato. GitHub y Google todavía requieren su integración de backend. La interfaz usa actualmente la sesión de wallet disponible.
+
+Validación: `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm test` (reglas existentes, formulario e integración de preparación) y `pnpm build`. Con Next ejecutándose en el puerto 3001, `node tests/smoke-next.mjs` comprueba páginas, assets y protección de la API sin iniciar sesión ni enviar transacciones.
+
 ## Qué corre dónde
 
 En App Router **todo es Server Component por defecto**: se ejecuta solo en el servidor y al navegador llega HTML más
@@ -80,6 +95,7 @@ Todas devuelven JSON. Errores: `{ "error": código, "message": texto }`. **Sesi�
 | `GET/POST /api/listings/[id]/applications` | sí | Postulantes (solo el dueño, ordenados por encaje) / postularse |
 | `GET /api/applications` · `PATCH /api/applications/[id]` | sí | Mis postulaciones / `shortlist`, `reject`, `select`, `withdraw` |
 | `GET /api/agreements` · `/api/agreements/[id]` | sí | Mis acuerdos / detalle con reglas, decisiones de la IA y calificaciones |
+| `POST /api/agreements/prepare` | sí | Congela condiciones y proveedor directo; devuelve los parámetros para firmar createAgreement |
 | `POST /api/agreements/[id]/review` | sí | La IA revisa la entrega; con `{ "release": true }` paga si el límite on-chain lo permite |
 | `POST /api/agreements/[id]/rating` | sí | Calificar a la contraparte de un acuerdo aprobado |
 | `GET /api/dashboard` | sí | Panel financiero: bloqueado, pagado, recibido, saldo, historial |

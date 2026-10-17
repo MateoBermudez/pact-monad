@@ -53,7 +53,7 @@ function Landing() {
                 Ver mis acuerdos
               </Link>
               <Link
-                to={connected ? "/crear" : "/conectar"}
+                to="/crear"
                 aria-label="Crear un acuerdo"
                 className="group flex items-center gap-2.5 rounded-full bg-ink py-1.5 pl-4 pr-1.5 text-sm font-bold text-ink-foreground transition-transform active:scale-95"
               >

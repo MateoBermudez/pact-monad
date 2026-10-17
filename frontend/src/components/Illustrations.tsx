@@ -101,6 +101,146 @@ export function IllustrationHero({ className }: { className?: string }) {
     </div>
   );
 }
+
+/**
+ * Contract + pencil + sparkles illustration for the "De una idea a un acuerdo claro" lime card.
+ */
+export function IllustrationContractIdea({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 210 190"
+      className={className}
+      role="img"
+      aria-label="Ilustración de un acuerdo firmado con lápiz y destellos"
+      style={{ width: "100%", height: "auto", overflow: "visible" }}
+    >
+      <g strokeLinecap="round" strokeLinejoin="round">
+        {/* Soft dark-lime circle backdrop */}
+        <circle cx={116} cy={112} r={66} fill={LIME_DEEP} />
+
+        {/* Top-right motion ticks */}
+        <path
+          d="M 148 16 C 151 8 156 6 156 12 C 156 17 151 20 148 16 Z"
+          fill={CREAM}
+          stroke={INK}
+          strokeWidth={2.8}
+        />
+        <path d="M 157 25 L 170 18" stroke={INK} strokeWidth={3.2} />
+        <path d="M 160 33 L 169 32" stroke={INK} strokeWidth={2.8} />
+
+        {/* Sparkles on the left */}
+        <Sparkle x={42} y={32} s={10} fill={CREAM} />
+        <Sparkle x={26} y={105} s={15} fill={CREAM} />
+
+        {/* Tilted contract document */}
+        <g transform="rotate(-10 104 104)" className="ill-bob">
+          <path
+            d="M 54 46 L 68 34 H 142 A 8 8 0 0 1 150 42 V 156 A 8 8 0 0 1 142 164 H 62 A 8 8 0 0 1 54 156 Z"
+            fill={CREAM}
+            stroke={INK}
+            strokeWidth={3.6}
+          />
+          {/* Folded top-left corner */}
+          <path d="M 54 46 H 66 A 2 2 0 0 0 68 44 V 34" fill="none" stroke={INK} strokeWidth={3.2} />
+
+          {/* Seal / rosette at top center */}
+          <path
+            d="M 102 50 L 105 53 L 110 52 L 110 57 L 114 60 L 111 64 L 112 69 L 107 69 L 104 73 L 100 70 L 95 71 L 95 66 L 91 63 L 94 59 L 93 54 L 98 54 Z"
+            fill={CREAM}
+            stroke={INK}
+            strokeWidth={3}
+          />
+
+          {/* 3 text lines */}
+          <line x1={74} y1={88} x2={130} y2={88} stroke={INK} strokeWidth={3.6} />
+          <line x1={74} y1={103} x2={130} y2={103} stroke={INK} strokeWidth={3.6} />
+          <line x1={74} y1={118} x2={122} y2={118} stroke={INK} strokeWidth={3.6} />
+
+          {/* Signature squiggle */}
+          <path
+            d="M 88 148 C 91 136 98 136 98 145 C 98 150 105 140 110 143 C 115 146 122 142 128 143"
+            fill="none"
+            stroke={INK}
+            strokeWidth={3.4}
+          />
+        </g>
+
+        {/* Pencil on the right */}
+        <g transform="rotate(28 164 100)">
+          {/* Pencil body */}
+          <rect x={152} y={46} width={22} height={74} rx={3} fill={CREAM} stroke={INK} strokeWidth={3.5} />
+          {/* Top cap / eraser band */}
+          <path d="M 152 56 H 174" stroke={INK} strokeWidth={3.2} />
+          {/* Vertical ridges */}
+          <line x1={159} y1={56} x2={159} y2={120} stroke={INK} strokeWidth={2.6} />
+          <line x1={167} y1={56} x2={167} y2={120} stroke={INK} strokeWidth={2.6} />
+          {/* Tip cone */}
+          <path d="M 152 120 L 163 144 L 174 120 Z" fill={CREAM} stroke={INK} strokeWidth={3.5} />
+          {/* Graphite point */}
+          <path d="M 159 135 L 163 144 L 167 135 Z" fill={INK} stroke={INK} strokeWidth={2} />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Padlock + sparkles + rays illustration space for the Step 3 "Fondos a bloquear" lime card.
+ */
+export function IllustrationEscrowLock({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 200 185"
+      className={className}
+      role="img"
+      aria-label="Ilustración de candado de escrow bloqueando fondos"
+      style={{ width: "100%", height: "auto", overflow: "visible" }}
+    >
+      <g strokeLinecap="round" strokeLinejoin="round">
+        {/* Soft dark-lime circle backdrop */}
+        <circle cx={108} cy={104} r={60} fill={LIME_DEEP} />
+
+        {/* Radiating burst lines */}
+        <line x1={68} y1={26} x2={75} y2={38} stroke={INK} strokeWidth={3.6} />
+        <line x1={108} y1={14} x2={108} y2={28} stroke={INK} strokeWidth={3.6} />
+        <line x1={148} y1={26} x2={138} y2={38} stroke={INK} strokeWidth={3.6} />
+        <line x1={174} y1={52} x2={162} y2={60} stroke={INK} strokeWidth={3.6} />
+        <line x1={182} y1={88} x2={168} y2={88} stroke={INK} strokeWidth={3.6} />
+        <line x1={30} y1={106} x2={42} y2={102} stroke={INK} strokeWidth={3.6} />
+
+        {/* Sparkles */}
+        <Sparkle x={44} y={62} s={13} fill={CREAM} />
+        <Sparkle x={168} y={134} s={14} fill={CREAM} />
+
+        {/* Tilted padlock */}
+        <g transform="rotate(14 106 106)" className="ill-bob">
+          {/* Shackle outer + inner */}
+          <path
+            d="M 80 86 V 60 A 26 26 0 0 1 132 60 V 86"
+            fill="none"
+            stroke={INK}
+            strokeWidth={17}
+          />
+          <path
+            d="M 80 86 V 60 A 26 26 0 0 1 132 60 V 86"
+            fill="none"
+            stroke={CREAM}
+            strokeWidth={10}
+          />
+
+          {/* 3D depth side of lock body */}
+          <rect x={68} y={82} width={82} height={68} rx={14} fill={CREAM} stroke={INK} strokeWidth={4} />
+          {/* Front face of lock body */}
+          <rect x={62} y={80} width={80} height={66} rx={14} fill={CREAM} stroke={INK} strokeWidth={4} />
+
+          {/* Keyhole */}
+          <circle cx={102} cy={107} r={7.5} fill={INK} />
+          <path d="M 98 111 L 95 128 H 109 L 106 111 Z" fill={INK} stroke={INK} strokeWidth={2} />
+        </g>
+      </g>
+    </svg>
+  );
+}
 /**
  * Settings: a semicircular gauge that reads as "below the line the AI releases
  * on its own, above it needs your signature". Driven by the live setting:

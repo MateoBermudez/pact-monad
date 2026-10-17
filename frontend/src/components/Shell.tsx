@@ -6,7 +6,7 @@ import { CLIENT, PROVIDER, short, useDemo, type Role, type Status } from "@/lib/
 import { CountUp } from "@/components/Effects";
 
 export function Header() {
-  const { connected, setConnected, wrongNetwork, setWrongNetwork, balance } = useDemo();
+  const { address, connected, setConnected, wrongNetwork, switchNetwork, balance } = useDemo();
   return (
     <>
       <AnimatePresence>
@@ -21,7 +21,10 @@ export function Header() {
               <span className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" /> Estás en otra red. Cambia a Monad Testnet
               </span>
-              <button onClick={() => setWrongNetwork(false)} className="press rounded-full bg-warning px-3 py-1.5 text-xs font-semibold text-warning-foreground">
+              <button
+                onClick={() => void switchNetwork()}
+                className="press rounded-full bg-warning px-3 py-1.5 text-xs font-semibold text-warning-foreground"
+              >
                 Cambiar red
               </button>
             </div>
@@ -46,7 +49,7 @@ export function Header() {
             {connected ? (
               <div className="flex items-center gap-1 rounded-full bg-ink py-1 pl-1 pr-1 text-ink-foreground">
                 <span className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-ink ring-2 ring-primary/40" />
-                <span className="hidden px-1.5 font-mono text-xs sm:inline">{short(CLIENT)}</span>
+                <span className="hidden px-1.5 font-mono text-xs sm:inline">{short(address)}</span>
                 <span className="rounded-full bg-primary px-2.5 py-1.5 text-xs font-bold text-ink">
                   <CountUp value={balance} /> MON
                 </span>
@@ -69,7 +72,7 @@ export function Header() {
 const DOCK: { to: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
   { to: "/", label: "Inicio", icon: Home, match: (p) => p === "/" },
   { to: "/dashboard", label: "Acuerdos", icon: LayoutGrid, match: (p) => p.startsWith("/dashboard") || p.startsWith("/pact") },
-  { to: "/crear", label: "Nuevo", icon: Plus, match: (p) => p.startsWith("/crear") },
+  { to: "/crear", label: "Crear", icon: Plus, match: (p) => p.startsWith("/crear") },
   { to: "/configuracion", label: "Ajustes", icon: Settings, match: (p) => p.startsWith("/configuracion") },
 ];
 
@@ -91,6 +94,11 @@ export function Dock() {
             <li key={d.to}>
               <Link
                 to={d.to}
+                onClick={() => {
+                  if (d.to === "/crear") {
+                    window.dispatchEvent(new CustomEvent("pact:reset-crear"));
+                  }
+                }}
                 aria-label={d.label}
                 aria-current={active ? "page" : undefined}
                 className={`press relative flex h-12 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors ${

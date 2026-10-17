@@ -44,9 +44,35 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/** Keep session cookies on the frontend origin; Next.js owns business logic. */
+async function proxyBackend(request: Request): Promise<Response> {
+  const backendUrl = process.env["BACKEND_URL"];
+  if (!backendUrl) return Response.json({ error: "backend_unconfigured" }, { status: 503 });
+  try {
+    const incoming = new URL(request.url);
+    const target = new URL(incoming.pathname + incoming.search, backendUrl);
+    const headers = new Headers(request.headers);
+    headers.delete("host");
+    headers.delete("content-length");
+    return await fetch(target, {
+      method: request.method,
+      headers,
+      body: ["GET", "HEAD"].includes(request.method) ? null : await request.arrayBuffer(),
+      redirect: "manual",
+      signal: request.signal,
+    });
+  } catch {
+    return Response.json({ error: "backend_unavailable" }, { status: 502 });
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (url.pathname.startsWith("/api/")) {
+        return await proxyBackend(request);
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
