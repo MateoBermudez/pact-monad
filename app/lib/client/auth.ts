@@ -1,6 +1,6 @@
 import "client-only";
 import { connectWallet } from "@/lib/client/wallet";
-import type { SessionUser } from "@/lib/shared/auth";
+import type { OAuthProvider, SessionUser } from "@/lib/shared/auth";
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
@@ -19,6 +19,18 @@ export async function signInWithWallet(): Promise<SessionUser> {
   const signature = await signer.signMessage(message);
   const { user } = await postJson<{ user: SessionUser }>("/api/auth/verify", { address, signature });
   return user;
+}
+
+export function oauthStartUrl(provider: OAuthProvider, next?: string): string {
+  const query = next ? `?next=${encodeURIComponent(next)}` : "";
+  return `/api/auth/oauth/${provider}${query}`;
+}
+
+export async function linkWalletToAccount(): Promise<{ user: SessionUser; merged: boolean }> {
+  const { signer, address } = await connectWallet();
+  const { message } = await postJson<{ message: string }>("/api/auth/nonce", { address });
+  const signature = await signer.signMessage(message);
+  return postJson<{ user: SessionUser; merged: boolean }>("/api/auth/wallet", { address, signature });
 }
 
 export async function fetchSession(): Promise<SessionUser | null> {
