@@ -85,7 +85,7 @@ export async function loadDashboard(user: SessionUser): Promise<DashboardDto> {
       [user.id],
     ),
     query<{ event: string; tx_hash: string; block_number: string; created_at: Date; data: Record<string, string>; agreement_id: string | null }>(
-      `select e.event, e.tx_hash, e.block_number::text as block_number, e.created_at, e.data, a.id as agreement_id
+      `select e.event, e.tx_hash, e.block_number::text as block_number, coalesce(e.block_time, e.created_at) as created_at, e.data, a.id as agreement_id
          from chain_events e
          left join agreements a on a.contract_address = e.contract_address and a.chain_agreement_id = e.chain_agreement_id
         where e.contract_address = $2
