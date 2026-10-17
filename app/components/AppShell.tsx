@@ -4,16 +4,25 @@ import { usePathname } from "next/navigation";
 import { motion, MotionConfig } from "motion/react";
 import { Toaster } from "sonner";
 import { PactProvider, usePact } from "@/lib/client/pact-context";
-import { isPublicPath, ONBOARDING_PATH } from "@/lib/shared/routes";
-import { Header, Dock } from "./Shell";
+import { useHydrated } from "@/lib/client/use-hydrated";
+import { isPublicPath, LANDING_PATH, ONBOARDING_PATH } from "@/lib/shared/routes";
+import { Header, Dock, type HeaderVariant } from "./Shell";
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const onboarding = isPublicPath(pathname) || pathname === ONBOARDING_PATH;
-  const { error } = usePact();
+  const { error, signedIn, loading } = usePact();
+  const hydrated = useHydrated();
+  const onboarding =
+    (isPublicPath(pathname) && pathname !== LANDING_PATH) || pathname === ONBOARDING_PATH;
+  const onLanding = pathname === LANDING_PATH;
+  const sessionKnown = hydrated && !loading;
+  const guestLanding = onLanding && sessionKnown && !signedIn;
+  const pendingLanding = onLanding && !sessionKnown;
+  const variant: HeaderVariant = onboarding || pendingLanding ? "minimal" : guestLanding ? "guest" : "full";
+  const showDock = !onboarding && !guestLanding && !pendingLanding;
   return (
     <div className={onboarding ? "onboarding-shell" : "min-h-screen"}>
-      <Header minimal={onboarding} />
+      <Header variant={variant} />
       <main
         className={
           onboarding
@@ -38,7 +47,7 @@ function Shell({ children }: { children: ReactNode }) {
           {children}
         </motion.div>
       </main>
-      {!onboarding && <Dock />}
+      {showDock && <Dock />}
       <Toaster position="bottom-center" offset={104} />
     </div>
   );

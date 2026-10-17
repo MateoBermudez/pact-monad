@@ -4,13 +4,13 @@ import { decideRoute, isPublicPath } from "./routes.ts";
 
 describe("decideRoute", () => {
   it("sin sesión, cualquier pantalla privada lleva al inicio de sesión", () => {
-    for (const path of ["/", "/dashboard", "/crear", "/perfil", "/configuracion", "/conectar", "/pact/123"]) {
+    for (const path of ["/dashboard", "/crear", "/perfil", "/configuracion", "/conectar", "/pact/123", "/explorar", "/cuenta"]) {
       assert.equal(decideRoute(path, false), "/iniciar-sesion", path);
     }
   });
 
-  it("sin sesión, solo se pueden ver el acceso, el registro y los documentos legales", () => {
-    for (const path of ["/iniciar-sesion", "/registro", "/terminos", "/privacidad"]) {
+  it("sin sesión se puede ver la landing, el acceso, el registro y los documentos legales", () => {
+    for (const path of ["/", "/iniciar-sesion", "/registro", "/terminos", "/privacidad"]) {
       assert.equal(decideRoute(path, false), null, path);
     }
   });
@@ -24,6 +24,10 @@ describe("decideRoute", () => {
     for (const path of ["/", "/dashboard", "/crear", "/perfil", "/terminos", "/privacidad", "/pact/123"]) {
       assert.equal(decideRoute(path, true), null, path);
     }
+  });
+
+  it("con sesión la landing sigue disponible y no redirige al dashboard", () => {
+    assert.equal(decideRoute("/", true), null);
   });
 
   it("no confunde rutas parecidas con las públicas", () => {

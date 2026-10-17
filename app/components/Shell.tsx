@@ -22,7 +22,9 @@ import { useHydrated } from "@/lib/client/use-hydrated";
 import { CountUp } from "@/components/Effects";
 import { NotificationBell } from "@/components/NotificationBell";
 
-export function Header({ minimal = false }: { minimal?: boolean }) {
+export type HeaderVariant = "full" | "minimal" | "guest";
+
+export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
   const router = useRouter();
   const {
     address,
@@ -41,7 +43,7 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
   return (
     <>
       <AnimatePresence>
-        {!minimal && connected && wrongNetwork && (
+        {variant === "full" && connected && wrongNetwork && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -88,7 +90,7 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
               className="h-7 w-auto"
             />
           </Link>
-          {!minimal && (
+          {variant === "full" && (
           <div className="flex items-center gap-2">
             <NotificationBell />
             <Link
@@ -152,6 +154,16 @@ export function Header({ minimal = false }: { minimal?: boolean }) {
               </Link>
             )}
           </div>
+          )}
+          {variant === "guest" && (
+            <div className="flex items-center gap-2">
+              <Link href="/iniciar-sesion" className="press rounded-full px-4 py-2 text-sm font-semibold">
+                Iniciar sesión
+              </Link>
+              <Link href="/registro" className="btn-primary h-10 px-4 py-0 text-xs">
+                Registrarme
+              </Link>
+            </div>
           )}
         </div>
       </header>

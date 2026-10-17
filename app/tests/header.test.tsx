@@ -47,7 +47,7 @@ afterEach(() => {
 
 describe("encabezado", () => {
   it("en las pantallas de acceso muestra solo el logo", () => {
-    render(<Header minimal />);
+    render(<Header variant="minimal" />);
     expect(screen.getByRole("link", { name: "PACT — Inicio" })).toBeInTheDocument();
     expect(screen.queryByText("campanita")).toBeNull();
     expect(screen.queryByText(/MetaMask/)).toBeNull();
@@ -73,6 +73,19 @@ describe("encabezado", () => {
   it("sin sesión no ofrece cerrar sesión", () => {
     state.signedIn = false;
     render(<Header />);
+    expect(screen.queryByRole("button", { name: "Cerrar sesión" })).toBeNull();
+  });
+});
+
+describe("encabezado de la landing para invitados", () => {
+  it("ofrece iniciar sesión y registrarse, sin nada de la cuenta", () => {
+    state.signedIn = false;
+    render(<Header variant="guest" />);
+    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toHaveAttribute("href", "/iniciar-sesion");
+    expect(screen.getByRole("link", { name: "Registrarme" })).toHaveAttribute("href", "/registro");
+    expect(screen.queryByText("campanita")).toBeNull();
+    expect(screen.queryByText(/MetaMask/)).toBeNull();
+    expect(screen.queryByText(/Testnet/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Cerrar sesión" })).toBeNull();
   });
 });

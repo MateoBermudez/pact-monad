@@ -15,8 +15,8 @@ import {
   STATUS_BADGE,
   short,
   usePact,
-  type Pact,
 } from "@/lib/client/pact-context";
+import { isActive, needsAction } from "@/lib/shared/ui-pact";
 import { CountUp } from "@/components/Effects";
 
 const FILTERS = [
@@ -27,12 +27,7 @@ const FILTERS = [
 ] as const;
 type Filter = (typeof FILTERS)[number];
 
-const active = (p: Pact) =>
-  ["Creado", "Aceptado", "Entregado"].includes(p.status);
-const needsAction = (p: Pact) =>
-  (p.role === "cliente" && p.status === "Entregado") ||
-  (p.role === "proveedor" &&
-    (p.status === "Creado" || p.status === "Aceptado"));
+const active = isActive;
 
 export default function Dashboard() {
   const { address, pacts, balance } = usePact();

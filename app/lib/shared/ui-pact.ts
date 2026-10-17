@@ -33,6 +33,20 @@ export const short = (value: string) =>
   value ? `${value.slice(0, 6)}…${value.slice(-4)}` : "Sin conectar";
 export const aiCanRelease = (amount: number, enabled: boolean, limit: number) =>
   enabled && limit > 0 && amount <= limit;
+export const isActive = (p: Pact): boolean => ["Creado", "Aceptado", "Entregado"].includes(p.status);
+export const needsAction = (p: Pact): boolean =>
+  (p.role === "cliente" && p.status === "Entregado") ||
+  (p.role === "proveedor" && (p.status === "Creado" || p.status === "Aceptado"));
+export function summarizePacts(pacts: readonly Pact[]) {
+  const sum = (items: readonly Pact[]) => items.reduce((total, p) => total + p.amount, 0);
+  return {
+    inProgress: pacts.filter(isActive).length,
+    needsAction: pacts.filter(needsAction).length,
+    lockedMon: sum(pacts.filter((p) => isActive(p) && p.role === "cliente")),
+    earnedMon: sum(pacts.filter((p) => p.role === "proveedor" && p.status === "Aprobado")),
+    completed: pacts.filter((p) => p.status === "Aprobado").length,
+  };
+}
 export const addDays = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toLocaleDateString("es-ES", {
     day: "2-digit",
