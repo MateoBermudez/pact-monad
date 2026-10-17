@@ -23,6 +23,7 @@ export type PortfolioItemDto = {
 
 export type ProfileDto = {
   id: string;
+  username: string | null;
   wallet: string | null;
   displayName: string | null;
   headline: string | null;
@@ -37,7 +38,8 @@ export type PublicProfileDto = ProfileDto & { portfolio: PortfolioItemDto[] };
 
 export type ProviderSummaryDto = {
   id: string;
-  wallet: string;
+  username: string | null;
+  wallet: string | null;
   displayName: string | null;
   headline: string | null;
   keywords: string[];

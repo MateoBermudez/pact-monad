@@ -31,6 +31,7 @@ export type ListingRow = {
   rules_confirmed_at: Date | null;
   awarded_application_id: string | null;
   created_at: Date;
+  client_username: string | null;
   client_name: string | null;
   client_score: number;
   applications_count: number;
@@ -40,7 +41,7 @@ const SELECT_LISTING = `
   select l.id, l.client_id, l.title, l.description, l.brief_file_id, l.category, l.keywords,
          l.budget_mon::text as budget_mon, l.deadline_days, l.status, l.rules_version, l.rules_hash,
          l.rules_confirmed_at, l.awarded_application_id, l.created_at,
-         u.display_name as client_name,
+         u.username as client_username, u.display_name as client_name,
          coalesce(r.client_score, 3.5)::float8 as client_score,
          (select count(*) from applications a where a.listing_id = l.id)::int as applications_count
     from listings l
@@ -72,6 +73,7 @@ export function toListingDto(
   return {
     id: row.id,
     clientId: row.client_id,
+    clientUsername: row.client_username,
     clientName: row.client_name,
     clientScore: row.client_score,
     title: row.title,

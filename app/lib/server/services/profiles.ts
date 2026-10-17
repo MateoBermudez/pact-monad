@@ -15,6 +15,7 @@ import type { UpdateProfileInput } from "@/lib/shared/schemas";
 
 type UserRow = {
   id: string;
+  username: string | null;
   wallet: string | null;
   display_name: string | null;
   headline: string | null;
@@ -67,7 +68,7 @@ export async function listSkills(): Promise<SkillDto[]> {
 
 export async function loadProfile(userId: string): Promise<ProfileDto> {
   const [user] = await query<UserRow>(
-    "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1",
+    "select id, username, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1",
     [userId],
   );
   if (!user) throw notFound("Usuario");
@@ -84,6 +85,7 @@ export async function loadProfile(userId: string): Promise<ProfileDto> {
 
   return {
     id: user.id,
+    username: user.username,
     wallet: user.wallet,
     displayName: user.display_name,
     headline: user.headline,
@@ -106,7 +108,7 @@ export async function loadPublicProfile(userId: string): Promise<PublicProfileDt
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileDto> {
   await withTransaction(async (client) => {
     const { rows } = await client.query<UserRow>(
-      "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1 for update",
+      "select id, username, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1 for update",
       [userId],
     );
     const current = rows[0];
@@ -152,7 +154,7 @@ export async function loadProviderSummaries(userIds: string[]): Promise<Map<stri
 
   const [users, reputations, portfolios, skills] = await Promise.all([
     query<UserRow>(
-      "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = any($1::uuid[])",
+      "select id, username, wallet, display_name, headline, bio, keywords, is_agent from users where id = any($1::uuid[])",
       [userIds],
     ),
     query<ReputationRow & { user_id: string }>("select * from user_reputation where user_id = any($1::uuid[])", [userIds]),
@@ -174,6 +176,7 @@ export async function loadProviderSummaries(userIds: string[]): Promise<Map<stri
   for (const user of users) {
     summaries.set(user.id, {
       id: user.id,
+      username: user.username,
       wallet: user.wallet,
       displayName: user.display_name,
       headline: user.headline,
