@@ -8,12 +8,26 @@ const state = vi.hoisted(() => ({
   items: [] as NotificationDto[],
   unread: 0,
   markAllRead: vi.fn(),
+  markRead: vi.fn(),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, onClick }: { href: string; children: React.ReactNode; onClick?: () => void }) => (
+    <a href={href} onClick={onClick}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("@/lib/client/pact-context", () => ({ usePact: () => ({ signedIn: state.signedIn }) }));
 vi.mock("@/lib/client/use-hydrated", () => ({ useHydrated: () => true }));
 vi.mock("@/lib/client/use-notifications", () => ({
-  useNotifications: () => ({ items: state.items, unread: state.unread, markAllRead: state.markAllRead }),
+  useNotifications: () => ({
+    items: state.items,
+    unread: state.unread,
+    markAllRead: state.markAllRead,
+    markRead: state.markRead,
+  }),
 }));
 
 afterEach(() => {
@@ -22,6 +36,7 @@ afterEach(() => {
   state.items = [];
   state.unread = 0;
   state.markAllRead.mockReset();
+  state.markRead.mockReset();
 });
 
 const item = (overrides: Partial<NotificationDto> = {}): NotificationDto => ({
@@ -78,5 +93,27 @@ describe("campanita de notificaciones", () => {
     render(<NotificationBell />);
     fireEvent.click(screen.getByRole("button", { name: "Notificaciones" }));
     expect(screen.queryByRole("button", { name: "Marcar todo como leído" })).toBeNull();
+  });
+});
+
+describe("campanita: abrir una solicitud", () => {
+  it("lleva al detalle de la solicitud y marca el aviso como leído", () => {
+    state.unread = 1;
+    state.items = [item()];
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole("button", { name: /Notificaciones/ }));
+    const link = screen.getByRole("link", { name: /Nueva solicitud para ti/ });
+    expect(link).toHaveAttribute("href", "/solicitudes/abc");
+    fireEvent.click(link);
+    expect(state.markRead).toHaveBeenCalledWith(["1"]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("no vuelve a marcar un aviso que ya estaba leído", () => {
+    state.items = [item({ readAt: "2026-10-17T15:01:00.000Z" })];
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole("button", { name: "Notificaciones" }));
+    fireEvent.click(screen.getByRole("link", { name: /Nueva solicitud para ti/ }));
+    expect(state.markRead).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { usePact } from "@/lib/client/pact-context";
 import { useHydrated } from "@/lib/client/use-hydrated";
@@ -11,7 +12,7 @@ const when = (iso: string) =>
 export function NotificationBell() {
   const { signedIn } = usePact();
   const hydrated = useHydrated();
-  const { items, unread, markAllRead } = useNotifications();
+  const { items, unread, markAllRead, markRead } = useNotifications();
   const [open, setOpen] = useState(false);
 
   if (!hydrated || !signedIn) return null;
@@ -54,12 +55,30 @@ export function NotificationBell() {
             <ul className="space-y-2">
               {items.map((item) => {
                 const reasons = Array.isArray(item.data.reasons) ? (item.data.reasons as string[]) : [];
-                return (
-                  <li key={item.id} className="rounded-xl border border-ink/10 p-2">
+                const content = (
+                  <>
                     <p className={item.readAt ? "text-sm" : "text-sm font-bold"}>{item.title}</p>
                     {item.body && <p className="text-xs text-muted-foreground">{item.body}</p>}
                     {reasons.length > 0 && <p className="text-xs">{reasons.join(" · ")}</p>}
                     <p className="text-[10px] text-muted-foreground">{when(item.createdAt)}</p>
+                  </>
+                );
+                return (
+                  <li key={item.id}>
+                    {item.listingId ? (
+                      <Link
+                        href={`/solicitudes/${item.listingId}`}
+                        onClick={() => {
+                          setOpen(false);
+                          if (!item.readAt) void markRead([item.id]);
+                        }}
+                        className="block rounded-xl border border-ink/10 p-2 hover:bg-primary/20"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="rounded-xl border border-ink/10 p-2">{content}</div>
+                    )}
                   </li>
                 );
               })}
