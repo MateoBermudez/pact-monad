@@ -2,9 +2,9 @@ import Image from "next/image";
 
 const ART = {
   register: {
-    src: "/illustrations/auth-registro.svg",
-    width: 1502,
-    height: 1041,
+    src: "/illustrations/auth-registro-persona.svg",
+    width: 1271,
+    height: 908,
   },
   login: {
     src: "/illustrations/auth-login-manos.svg",
