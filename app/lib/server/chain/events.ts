@@ -17,7 +17,18 @@ export type ChainEvent =
   | { name: "AgreementApproved"; id: bigint; provider: string; amount: bigint }
   | { name: "AgreementCancelled"; id: bigint; client: string; amount: bigint }
   | { name: "AutoReleaseLimitSet"; client: string; limit: bigint }
-  | { name: "AgentReleased"; id: bigint; decisionHash: string; amount: bigint };
+  | { name: "AgentReleased"; id: bigint; decisionHash: string; amount: bigint }
+  | { name: "AmendmentsInvalidated"; id: bigint; by: string; nonce: bigint }
+  | {
+      name: "AgreementAmended";
+      id: bigint;
+      by: string;
+      oldAmount: bigint;
+      newAmount: bigint;
+      newDeadline: bigint;
+      nonce: bigint;
+      refunded: bigint;
+    };
 
 function big(value: unknown, field: string): bigint {
   if (typeof value !== "bigint") throw new Error(`Campo ${field} inválido en el evento`);
@@ -80,6 +91,19 @@ export function decodeLog(log: { topics: readonly string[]; data: string }): Cha
         id: big(args.id, "id"),
         decisionHash: text(args.decisionHash, "decisionHash").toLowerCase(),
         amount: big(args.amount, "amount"),
+      };
+    case "AmendmentsInvalidated":
+      return { name: parsed.name, id: big(args.id, "id"), by: address(args.by, "by"), nonce: big(args.nonce, "nonce") };
+    case "AgreementAmended":
+      return {
+        name: parsed.name,
+        id: big(args.id, "id"),
+        by: address(args.by, "by"),
+        oldAmount: big(args.oldAmount, "oldAmount"),
+        newAmount: big(args.newAmount, "newAmount"),
+        newDeadline: big(args.newDeadline, "newDeadline"),
+        nonce: big(args.nonce, "nonce"),
+        refunded: big(args.refunded, "refunded"),
       };
     default:
       return null;

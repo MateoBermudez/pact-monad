@@ -11,13 +11,13 @@ export async function emitWebhook<T extends WebhookEventType>(
   db: Queryable,
   args: { type: T; recipients: WebhookRecipient[]; data: WebhookData[T]; dedupe?: string },
 ): Promise<void> {
-  const decision = args.type === "decision.created" ? (args.data as WebhookData["decision.created"]) : undefined;
+  const context: Record<string, unknown> = { ...args.data };
 
   for (const recipient of args.recipients) {
     const payload = {
       recipientRole: recipient.role,
       data: args.data,
-      nextAction: nextActionFor(args.type, recipient.role, decision),
+      nextAction: nextActionFor(args.type, recipient.role, context),
     };
     await db.query(
       `insert into webhook_deliveries (endpoint_id, event, payload, dedupe_key)

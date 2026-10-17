@@ -19,6 +19,7 @@ const EVENT_LABELS: Record<string, string> = {
   AgreementApproved: "Pago liberado",
   AgreementCancelled: "Acuerdo cancelado y reembolsado",
   AgentReleased: "La IA liberó el pago",
+  AgreementAmended: "Precio o plazo renegociado",
   AutoReleaseLimitSet: "Límite de pago de la IA actualizado",
 };
 
@@ -136,6 +137,10 @@ export async function loadChangeVersion(userId: string): Promise<string> {
        coalesce((select extract(epoch from max(d.created_at)) from decisions d
                    join agreements a on a.id = d.agreement_id where a.client_id = $1 or a.provider_id = $1), 0),
        coalesce((select extract(epoch from updated_at) from ai_settings where user_id = $1), 0),
+       coalesce((select extract(epoch from max(m.created_at)) from agreement_messages m
+                   join agreements a on a.id = m.agreement_id where a.client_id = $1 or a.provider_id = $1), 0),
+       coalesce((select extract(epoch from max(coalesce(p.resolved_at, p.created_at))) from agreement_proposals p
+                   join agreements a on a.id = p.agreement_id where a.client_id = $1 or a.provider_id = $1), 0),
        coalesce((select max(id) from notifications where user_id = $1), 0),
        (select count(*) from notifications where user_id = $1 and read_at is null)
      ) as version`,

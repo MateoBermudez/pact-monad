@@ -12,6 +12,11 @@ export const WEBHOOK_EVENTS = [
   "agreement.delivered",
   "agreement.approved",
   "agreement.cancelled",
+  "agreement.message",
+  "agreement.amended",
+  "proposal.created",
+  "proposal.accepted",
+  "proposal.rejected",
   "decision.created",
 ] as const;
 
@@ -28,6 +33,8 @@ export type NextActionName =
   | "review_delivery"
   | "approve_payment"
   | "rate"
+  | "respond_to_proposal"
+  | "execute_amendment"
   | "none";
 
 // Qué sigue y quién lo hace. `youAct` dice si le toca a quien recibe el aviso: un agente solo reacciona cuando es true.
@@ -61,6 +68,19 @@ export type WebhookData = {
   "agreement.approved": AgreementRef;
   "agreement.cancelled": AgreementRef;
   "decision.created": { agreementId: string; decisionId: string; verdict: DecisionVerdict; kind: DecisionKind; executed: boolean };
+  "agreement.message": { agreementId: string; messageId: string; senderRole: Party; preview: string };
+  "agreement.amended": AgreementRef & { oldAmountMon: string; refundedMon: string; deadline: string };
+  "proposal.created": {
+    agreementId: string;
+    proposalId: string;
+    proposerRole: Party;
+    oldAmountMon: string;
+    newAmountMon: string;
+    newDeadline: string | null;
+    expiresAt: string;
+  };
+  "proposal.accepted": { agreementId: string; proposalId: string; newAmountMon: string; deltaMon: string; executor: Party };
+  "proposal.rejected": { agreementId: string; proposalId: string };
 };
 
 // Lo que recibe la URL del webhook en el cuerpo de la petición.
@@ -75,12 +95,10 @@ export type WebhookEnvelope<T extends WebhookEventType = WebhookEventType> = {
 
 const none = (hint: string): NextAction => ({ actor: "none", action: "none", youAct: false, hint });
 
-export function nextActionFor(
-  type: WebhookEventType,
-  recipient: Party | null,
-  data?: Partial<WebhookData["decision.created"]>,
-): NextAction {
+export function nextActionFor(type: WebhookEventType, recipient: Party | null, data: Record<string, unknown> = {}): NextAction {
   const acts = (actor: Party) => recipient === actor;
+  const verdict = data.verdict;
+  const executed = data.executed === true;
   switch (type) {
     case "listing.matched":
       return { actor: "provider", action: "apply_to_listing", youAct: acts("provider"), hint: "Si te interesa, postúlate con POST /api/listings/{listingId}/applications {message, priceMon, days}" };
@@ -97,11 +115,35 @@ export function nextActionFor(
     case "agreement.approved":
       return { actor: "both", action: "rate", youAct: recipient !== null, hint: "Califica a tu contraparte con POST /api/agreements/{id}/rating" };
     case "decision.created":
-      if (data?.executed) return none("La IA ya liberó el pago");
-      if (data?.kind === "auto_release") return none("La IA está liberando el pago dentro del límite que fijaste");
-      return data?.verdict === "cumple"
+      if (executed) return none("La IA ya liberó el pago");
+      if (data.kind === "auto_release") return none("La IA está liberando el pago dentro del límite que fijaste");
+      return verdict === "cumple"
         ? { actor: "client", action: "approve_payment", youAct: acts("client"), hint: "La IA recomienda pagar: aprueba on-chain con approveAndRelease, o fija un límite para que pague sola" }
         : { actor: "client", action: "review_delivery", youAct: acts("client"), hint: "La IA recomienda revisar la entrega antes de pagar" };
+    case "agreement.message":
+      return none("Nuevo mensaje. Responde con POST /api/agreements/{agreementId}/messages {body}");
+    case "proposal.created": {
+      const other: Party = data.proposerRole === "client" ? "provider" : "client";
+      return {
+        actor: other,
+        action: "respond_to_proposal",
+        youAct: acts(other),
+        hint: "Acepta, rechaza o contraproponer: GET /api/agreements/{agreementId}/messages trae la propuesta con los pasos de ejecución",
+      };
+    }
+    case "proposal.accepted": {
+      const executor: Party = data.executor === "provider" ? "provider" : "client";
+      return {
+        actor: executor,
+        action: "execute_amendment",
+        youAct: acts(executor),
+        hint: "Aceptaron tu propuesta: quien ejecuta envía amendAgreement on-chain (el cliente añade los fondos si el importe sube)",
+      };
+    }
+    case "proposal.rejected":
+      return none("La propuesta fue rechazada. Puedes enviar otra desde el chat");
+    case "agreement.amended":
+      return none("Importe o plazo actualizados en el contrato");
     default:
       return none("No hay acción pendiente");
   }

@@ -460,6 +460,39 @@ contract PactEscrowAmendTest is Test {
         assertEq(address(pact).balance, 20 ether);
     }
 
+    // --- revocar firmas --------------------------------------------------------------------------------------
+
+    function test_PartyCanInvalidateOutstandingSignatures() public {
+        uint256 id = _createAndAccept();
+        uint64 expiry = _expiry();
+        bytes memory sig = _sign(providerKey, id, 30 ether, 0, expiry);
+
+        vm.prank(provider);
+        pact.invalidateAmendments(id);
+        assertEq(pact.amendmentNonce(id), 1);
+
+        vm.prank(client);
+        vm.expectRevert(PactEscrow.InvalidSignature.selector);
+        pact.amendAgreement(id, 30 ether, 0, expiry, sig);
+    }
+
+    function test_StrangerCannotInvalidate() public {
+        uint256 id = _createAndAccept();
+        vm.prank(stranger);
+        vm.expectRevert(PactEscrow.NotParty.selector);
+        pact.invalidateAmendments(id);
+    }
+
+    function test_CannotInvalidateAfterDelivery() public {
+        uint256 id = _createAndAccept();
+        vm.prank(provider);
+        pact.registerDelivery(id, "https://example.com/e", "Entregado");
+
+        vm.prank(client);
+        vm.expectRevert(abi.encodeWithSelector(PactEscrow.InvalidStatus.selector, PactEscrow.Status.Delivered));
+        pact.invalidateAmendments(id);
+    }
+
     // --- propiedad: el contrato siempre guarda exactamente el importe del acuerdo -----------------------------
 
     function testFuzz_ContractBalanceAlwaysEqualsTheAgreedAmount(uint96 rawNewAmount, bool providerPresents) public {
