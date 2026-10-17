@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
+import { MAX_SKILLS } from "@/lib/shared/profile";
 import { normalizeUsername, usernameError } from "@/lib/shared/username";
 
 export const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Hash de transacción inválido");
@@ -20,7 +21,7 @@ export const usernameSchema = z
 
 export const setUsernameSchema = z.object({ username: usernameSchema });
 
-export const usernameQuerySchema = z.object({ u: usernameSchema });
+export const usernameQuerySchema = z.object({ u: z.string().max(40).default("") });
 
 export const linkWalletSchema = z.object({
   address: z.string().min(1).max(64),
@@ -38,7 +39,7 @@ export const updateProfileSchema = z.object({
   keywords: z.array(z.string().max(60)).max(40).optional(),
   skills: z
     .array(z.object({ slug: z.string().min(1).max(40), level: z.number().int().min(1).max(5).default(3) }))
-    .max(20)
+    .max(MAX_SKILLS, `Puedes elegir hasta ${MAX_SKILLS} habilidades`)
     .optional(),
   isAgent: z.boolean().optional(),
 });
