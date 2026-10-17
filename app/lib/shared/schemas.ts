@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OAUTH_PROVIDERS, ROLES } from "@/lib/shared/auth";
+import { DEFAULT_PROPOSAL_HOURS, MAX_MESSAGE_LENGTH, MAX_PROPOSAL_HOURS, MAX_PROPOSAL_NOTE_LENGTH } from "@/lib/shared/chat";
 import { FILE_PURPOSES } from "@/lib/shared/files";
 import { AVAILABILITIES, MAX_LINKS, MAX_SKILLS } from "@/lib/shared/profile";
 import { normalizeUsername, usernameError } from "@/lib/shared/username";
@@ -101,7 +102,7 @@ export const createPortfolioItemSchema = z.object({
 });
 export type CreatePortfolioItemInput = z.infer<typeof createPortfolioItemSchema>;
 
-const monAmountSchema = z
+export const monAmountSchema = z
   .number()
   .positive()
   .max(5_000_000)
@@ -187,3 +188,35 @@ export const updateWebhookSchema = z.object({
   active: z.boolean().optional(),
 });
 export type UpdateWebhookInput = z.infer<typeof updateWebhookSchema>;
+
+export const sendMessageSchema = z.object({ body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) });
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+
+const proposalTermsSchema = z
+  .object({
+    newAmountMon: monAmountSchema.optional(),
+    // Nuevo plazo (ISO 8601). Si se omite, el plazo del acuerdo no cambia.
+    newDeadline: z.string().datetime().optional(),
+    expiresInHours: z.number().int().min(1).max(MAX_PROPOSAL_HOURS).default(DEFAULT_PROPOSAL_HOURS),
+  })
+  .refine((value) => value.newAmountMon !== undefined || value.newDeadline !== undefined, {
+    message: "Propón un nuevo precio, un nuevo plazo o ambos",
+  });
+
+export const prepareProposalSchema = proposalTermsSchema;
+export type PrepareProposalInput = z.infer<typeof prepareProposalSchema>;
+
+const signatureSchema = z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Firma inválida");
+
+export const createProposalSchema = proposalTermsSchema.and(
+  z.object({
+    nonce: z.string().regex(/^\d{1,20}$/),
+    expiry: z.number().int().positive(),
+    signature: signatureSchema,
+    note: z.string().trim().max(MAX_PROPOSAL_NOTE_LENGTH).optional(),
+  }),
+);
+export type CreateProposalInput = z.infer<typeof createProposalSchema>;
+
+export const acceptProposalSchema = z.object({ signature: signatureSchema.optional() });
+export type AcceptProposalInput = z.infer<typeof acceptProposalSchema>;
