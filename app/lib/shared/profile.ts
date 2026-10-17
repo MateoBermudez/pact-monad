@@ -34,3 +34,15 @@ export type ProfileDto = {
 };
 
 export type PublicProfileDto = ProfileDto & { portfolio: PortfolioItemDto[] };
+
+export type ProviderSummaryDto = {
+  id: string;
+  wallet: string;
+  displayName: string | null;
+  headline: string | null;
+  keywords: string[];
+  isAgent: boolean;
+  skills: UserSkillDto[];
+  reputation: ReputationDto;
+  portfolioCount: number;
+};

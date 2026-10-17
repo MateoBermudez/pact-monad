@@ -30,3 +30,62 @@ export const createPortfolioItemSchema = z.object({
   tags: z.array(z.string().max(60)).max(20).default([]),
 });
 export type CreatePortfolioItemInput = z.infer<typeof createPortfolioItemSchema>;
+
+const monAmountSchema = z
+  .number()
+  .positive()
+  .max(5_000_000)
+  .refine((value) => Math.abs(value * 1e6 - Math.round(value * 1e6)) < 1e-6, "Máximo 6 decimales");
+
+const listingFieldsSchema = z.object({
+  title: z.string().trim().min(3).max(120).optional(),
+  description: z.string().trim().min(10).max(5000).optional(),
+  briefFileId: uuidSchema.optional(),
+  budgetMon: monAmountSchema.optional(),
+  deadlineDays: z.number().int().min(1).max(365).optional(),
+  category: z.string().trim().min(2).max(60).optional(),
+  keywords: z.array(z.string().max(60)).max(40).optional(),
+});
+
+export const createListingSchema = listingFieldsSchema.refine((value) => value.description || value.briefFileId, {
+  message: "Describe lo que necesitas o adjunta un archivo",
+});
+export type CreateListingInput = z.infer<typeof createListingSchema>;
+
+export const updateListingSchema = listingFieldsSchema.omit({ briefFileId: true }).partial();
+export type UpdateListingInput = z.infer<typeof updateListingSchema>;
+
+export const saveRulesSchema = z.object({
+  rules: z
+    .array(
+      z.object({
+        criterion: z.string().trim().min(5).max(300),
+        weight: z.number().int().min(1).max(5).default(3),
+      }),
+    )
+    .min(1)
+    .max(12),
+});
+export type SaveRulesInput = z.infer<typeof saveRulesSchema>;
+
+export const applySchema = z.object({
+  message: z.string().trim().min(10).max(2000),
+  priceMon: monAmountSchema.optional(),
+  days: z.number().int().min(1).max(365).optional(),
+});
+export type ApplyInput = z.infer<typeof applySchema>;
+
+export const applicationActionSchema = z.object({ action: z.enum(["shortlist", "reject", "select", "withdraw"]) });
+export type ApplicationAction = z.infer<typeof applicationActionSchema>["action"];
+
+export const listListingsQuerySchema = z.object({
+  scope: z.enum(["recommended", "open", "mine"]).default("recommended"),
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+
+export const providersQuerySchema = z.object({
+  skills: z.string().max(200).optional(),
+  q: z.string().trim().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
