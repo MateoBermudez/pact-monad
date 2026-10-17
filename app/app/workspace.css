@@ -667,3 +667,10 @@
     font-size: 60px;
   }
 }
+
+.location-field { display: grid; gap: 8px; min-width: 0; }
+.location-field small { color: var(--muted, #666); font-size: 13px; }
+.location-field small a { text-decoration: underline; }
+.location-options { list-style: none; margin: 0; padding: 4px; border: 1px solid #bac79b; border-radius: 12px; background: #fff; max-height: 240px; overflow-y: auto; }
+.location-options [role="option"] { padding: 10px 12px; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
+.location-options [role="option"]:hover, .location-options [aria-selected="true"] { background: #eaffb3; color: #111; }

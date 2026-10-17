@@ -14,6 +14,7 @@ import type { IdentityDto } from "@/lib/shared/auth";
 import type { ProfileDto, Availability } from "@/lib/shared/profile";
 import { usePact } from "@/lib/client/pact-context";
 import { ProfileSkills } from "@/components/ProfileSkills";
+import { LocationInput } from "@/components/LocationInput";
 export default function Account() {
   const params = useSearchParams();
   const state = useResource<{ profile: ProfileDto }>("/api/profile");
@@ -246,14 +247,7 @@ function ProfileFields({
           rows={5}
         />
       </label>
-      <label>
-        Ubicación
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          maxLength={80}
-        />
-      </label>
+      <LocationInput value={location} onChange={setLocation} disabled={busy} />
       <label>
         Disponibilidad
         <select
