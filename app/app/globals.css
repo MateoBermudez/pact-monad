@@ -710,6 +710,47 @@
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
+@media (min-width: 801px) {
+  .auth-layout-register .auth-hero {
+    min-height: 240px;
+    padding: 22px 24px;
+  }
+  .auth-layout-register .auth-hero h1 {
+    font-size: clamp(32px, 3vw, 40px);
+  }
+  .auth-layout-register .auth-hero p {
+    font-size: 18px;
+    margin-top: 10px;
+    max-width: 210px;
+  }
+  .auth-layout-register .auth-illustration-register {
+    width: 54%;
+  }
+  .auth-layout-register .auth-card {
+    padding: 12px 20px;
+  }
+  .auth-layout-register .auth-card h2 {
+    font-size: 27px;
+  }
+  .auth-layout-register .auth-muted {
+    font-size: 16px;
+  }
+  .auth-layout-register .social-actions {
+    margin: 10px 0;
+    gap: 8px;
+  }
+  .auth-layout-register .social-button {
+    min-height: 40px;
+    padding: 6px 12px;
+  }
+  .auth-layout-register .auth-footer {
+    padding-top: 10px;
+    font-size: 12px;
+  }
+  .auth-layout-register .auth-footer p + p {
+    margin-top: 8px;
+  }
+}
 @media (max-width: 800px) {
   .onboarding-shell {
     margin: 12px;

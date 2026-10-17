@@ -37,7 +37,7 @@ export function SocialAuth({ register = false }: { register?: boolean }) {
     }
   }
   return (
-    <section className="auth-layout">
+    <section className={register ? "auth-layout auth-layout-register" : "auth-layout"}>
       <div className="auth-hero">
         <div className="auth-hero-copy">
           <h1>
