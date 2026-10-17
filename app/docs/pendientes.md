@@ -72,7 +72,7 @@ Lo que existe y se probó está en `roles-notificaciones.md`, `auth-ui.md` y `fr
 - [ ] **Prueba frágil:** `tests/crear.test.tsx` falló una vez por lentitud en frío y pasó en las siguientes.
 - [ ] **Revisión en móvil** y de accesibilidad (teclado, lector de pantalla), y casos de error: firma cancelada, cambio de
       cuenta o de red, IA caída, red interrumpida.
-- [ ] **`/` para invitados:** ahora redirige al acceso, así que no hay página pública de presentación. Decidir si se quiere
-      una (por ejemplo para el jurado) y qué mostrar.
+- [ ] **Cifras de la landing para invitados:** hoy son genéricas y ciertas (3 pasos, MON, tu firma). La maqueta original
+      traía números de marketing ("1.2K acuerdos", "48K MON"); no se usaron porque no son reales.
 - [ ] **Documentos legales:** siguen siendo borradores; revisarlos con alguien competente.
 - [ ] **`docs/frontend-status.md`** debe actualizarse con lo de este documento.

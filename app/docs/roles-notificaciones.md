@@ -6,7 +6,9 @@ Regla única: **sin sesión solo existe el acceso; con sesión, el dashboard.**
 
 | Situación | Resultado |
 |---|---|
-| Sin sesión en cualquier pantalla privada (`/`, `/dashboard`, `/crear`, `/perfil`, `/configuracion`, `/conectar`, `/pact/*`) | Redirige a `/iniciar-sesion` |
+| Sin sesión en cualquier pantalla privada (`/dashboard`, `/crear`, `/perfil`, `/explorar`, `/cuenta`, `/pact/*`…) | Redirige a `/iniciar-sesion` |
+| Sin sesión en la landing (`/`) | Se muestra con datos genéricos y los botones **Iniciar sesión** y **Registrarme** en el encabezado; sin barra inferior |
+| Con sesión en la landing (`/`) | Se muestra la misma landing con **sus** datos: acuerdos en curso, que requieren su acción, MON bloqueados y cobrados |
 | Sin sesión en `/iniciar-sesion`, `/registro`, `/terminos`, `/privacidad` | Se muestran, con encabezado mínimo (solo el logo) |
 | Con sesión en `/iniciar-sesion` o `/registro` | Redirige a `/dashboard` |
 | Sesión caducada o borrada (la cookie sigue en el navegador) | La interfaz borra la cookie y lleva a `/iniciar-sesion` |
@@ -17,7 +19,11 @@ Regla única: **sin sesión solo existe el acceso; con sesión, el dashboard.**
   (un prestador necesita al menos una), y a `/dashboard` en los demás casos.
 - Los errores del flujo OAuth vuelven a `/iniciar-sesion?auth_error=<código>`. Si la persona ya tenía sesión, vuelven a
   la pantalla de origen.
-- El encabezado completo (campanita, perfil, cerrar sesión, red, MetaMask) y la barra inferior solo aparecen dentro de la app.
+- Hay tres encabezados: `full` (dentro de la app: campanita, perfil, cerrar sesión, red, MetaMask), `guest` (landing sin
+  sesión: logo, iniciar sesión, registrarme) y `minimal` (acceso, registro, legales y configuración inicial: solo el logo).
+  La barra inferior solo aparece dentro de la app.
+- Los números de la landing salen de `summarizePacts` (`lib/shared/ui-pact.ts`), el mismo cálculo del dashboard.
+- Las ilustraciones de acceso son `public/illustrations/auth-login.svg` y `auth-registro.svg`.
 
 ## Roles
 
