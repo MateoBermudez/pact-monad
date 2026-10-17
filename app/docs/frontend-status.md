@@ -44,8 +44,8 @@ no sustituye una prueba con Supabase, OAuth, IA y Monad desplegados.
   cambios de cuenta/red, errores de IA, permisos de archivos y red interrumpida.
 - Revisar los borradores legales y conservar prueba de las autorizaciones
   exigibles. La nota del registro no implementa por sí sola esa persistencia.
-- El perfil guarda la elección cliente/proveedor/ambos como presentación
-  (`headline`), no como un rol ni un permiso de seguridad.
+- La elección cliente/proveedor/ambos ya es un rol real (`roles`) con permisos; ver `roles-notificaciones.md`.
+  La lista completa de lo que falta está en `pendientes.md`.
 
 No hay archivo `.env.local` en esta copia durante la revisión; no se ha
 verificado el funcionamiento real de los servicios externos ni del dinero.
