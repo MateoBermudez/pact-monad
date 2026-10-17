@@ -20,7 +20,15 @@ import type {
 } from "@/lib/shared/agreements";
 import { trimMon } from "@/lib/shared/money";
 import { referencedFileId } from "@/lib/shared/file-reference";
-import { getSignedFileUrl } from "@/lib/server/services/files";
+import { getFileInfo } from "@/lib/server/services/files";
+import type { FileDto } from "@/lib/shared/files";
+
+// pact-ai acepta como máximo 512 caracteres de "evidencia".
+const MAX_EVIDENCE_TEXT = 512;
+
+function describeEvidenceFile(file: FileDto): string {
+  return `Archivo adjunto: ${file.fileName} (${file.mimeType}, ${file.sizeBytes} bytes)`.slice(0, MAX_EVIDENCE_TEXT);
+}
 
 const DELIVERED_ON_CHAIN = 3;
 
@@ -344,7 +352,11 @@ export async function reviewAgreement(args: { agreementId: string; clientId: str
   let ai: ReviewOutput;
   try {
     const fileId = referencedFileId(agreement.evidence_url ?? "");
-    const evidenceUrl = fileId ? (await getSignedFileUrl(args.clientId, fileId)).url : agreement.evidence_url ?? "";
+    // La IA no abre la evidencia, solo lee este texto (y pact-ai lo limita a 512 caracteres). Una URL firmada de Storage
+    // es larga y caduca, así que de un archivo adjunto se le da su descripción; de un enlace, el enlace recortado.
+    const evidenceUrl = fileId
+      ? describeEvidenceFile(await getFileInfo(args.clientId, fileId))
+      : (agreement.evidence_url ?? "").slice(0, MAX_EVIDENCE_TEXT);
     ai = await withCredits(args.clientId, "review", () =>
       reviewWithAi({
         requirements: agreement.listing_description ?? agreement.description ?? "",

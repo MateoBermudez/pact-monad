@@ -33,7 +33,8 @@ export async function downloadObject(path: string): Promise<Uint8Array<ArrayBuff
   return new Uint8Array(await res.arrayBuffer());
 }
 
-export async function signObjectUrl(path: string, expiresInSeconds = 300): Promise<string> {
+// `downloadName` fuerza la descarga con ese nombre (Content-Disposition: attachment) en lugar de abrirlo en el navegador.
+export async function signObjectUrl(path: string, expiresInSeconds = 300, downloadName?: string): Promise<string> {
   const { base, headers } = config();
   const res = await fetch(objectUrl(base, "sign", path), {
     method: "POST",
@@ -43,7 +44,8 @@ export async function signObjectUrl(path: string, expiresInSeconds = 300): Promi
   if (!res.ok) throw new Error(`Storage no pudo firmar la URL (${res.status})`);
   const body = (await res.json()) as { signedURL?: string };
   if (!body.signedURL) throw new Error("Storage devolvió una URL firmada vacía");
-  return `${base}${body.signedURL}`;
+  const url = `${base}${body.signedURL}`;
+  return downloadName ? `${url}${url.includes("?") ? "&" : "?"}download=${encodeURIComponent(downloadName)}` : url;
 }
 
 export async function deleteObject(path: string): Promise<void> {
