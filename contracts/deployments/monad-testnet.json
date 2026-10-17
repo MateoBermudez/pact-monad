@@ -2,14 +2,14 @@
   "network": "monad-testnet",
   "chainId": 10143,
   "contract": "PactEscrow",
-  "address": "0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec",
-  "deployBlock": 71903631,
-  "deployTxHash": "0xa79e7155e7622c81896bb6d2c031a0a816a71c795d6e840b15fb45b8a3a88b87",
+  "address": "0x09AE7717bdcDC03eA73D539ECc321Dc96B8a80D3",
+  "deployBlock": 71932735,
+  "deployTxHash": "0x4a8b0f0213e671b7a4a7a07d02793731ac4960cdc6038ec389ef562d68a03172",
   "deployer": "0x746A0a3D4F5a9b13Ce203246Be500043927eC66D",
   "agent": "0x7A9E29a2E37590a7242930AE8f259e8562800825",
   "maxAutoReleaseMon": "5000000",
   "deployedOn": "2026-10-17",
-  "explorer": "https://testnet.monadscan.com/address/0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec",
-  "sourceVerification": "Sourcify (exact_match) https://sourcify-api-monad.blockvision.org/verify-ui/jobs/641eaf41-63dc-4c99-9760-cc55bbb2ae78",
-  "notes": "Despliegue definitivo para la demo. Un contrato de ensayo anterior (0xbD3EfE0EF503F3E8e57385Cac6b04aea548B3a22) se usó para probar el ciclo completo en la red real y no debe usarse."
+  "explorer": "https://testnet.monadscan.com/address/0x09AE7717bdcDC03eA73D539ECc321Dc96B8a80D3",
+  "sourceVerification": "Sourcify (exact_match) https://sourcify-api-monad.blockvision.org/verify-ui/jobs/1f7cab32-7e1d-47f8-ac32-c0b577e76474",
+  "notes": "Versión con amendAgreement/invalidateAmendments (renegociar importe y plazo con firma EIP-712). Reemplaza al contrato 0xD3798ac144eeaF6636D89B2f7FAB4555d4431Cec (sin enmiendas), que ya no se usa; los acuerdos de ese contrato quedan fuera de la app. Un contrato de ensayo anterior (0xbD3EfE0EF503F3E8e57385Cac6b04aea548B3a22) tampoco debe usarse."
 }
