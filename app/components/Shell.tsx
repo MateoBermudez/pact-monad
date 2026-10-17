@@ -18,6 +18,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode } from "react";
 import { short, usePact } from "@/lib/client/pact-context";
+import { useHydrated } from "@/lib/client/use-hydrated";
 import { CountUp } from "@/components/Effects";
 
 export function Header() {
@@ -28,9 +29,12 @@ export function Header() {
     wrongNetwork,
     switchNetwork,
     balance,
-    signedIn,
-    loading,
+    signedIn: sessionActive,
+    loading: sessionLoading,
   } = usePact();
+  const hydrated = useHydrated();
+  const loading = !hydrated || sessionLoading;
+  const signedIn = hydrated && sessionActive;
   return (
     <>
       <AnimatePresence>
@@ -239,7 +243,9 @@ export function Dock() {
 
 /** Shows a MetaMask sign-in prompt instead of the page when no wallet is connected. */
 export function ConnectGate({ children }: { children: ReactNode }) {
-  const { signedIn, loading } = usePact();
+  const { signedIn, loading: sessionLoading } = usePact();
+  const hydrated = useHydrated();
+  const loading = !hydrated || sessionLoading;
   if (loading)
     return (
       <p role="status" className="card text-sm">
