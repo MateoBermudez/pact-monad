@@ -8,6 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { isPublicPath, LOGIN_PATH } from "@/lib/shared/routes";
 import { api, ApiRequestError } from "./api";
 import { subscribeToChanges } from "./realtime";
 import {
@@ -43,14 +45,18 @@ type State = {
   pacts: Pact[];
   aiAutoApprove: boolean;
   aiLimit: number;
+  changes: number;
   setConnected: (value: boolean) => void;
   connectWallet: () => Promise<string>;
   switchNetwork: () => Promise<void>;
   signIn: () => Promise<void>;
+  logout: () => Promise<void>;
   refresh: () => Promise<Pact[]>;
 };
 const Context = createContext<State | null>(null);
 export function PactProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [address, setAddress] = useState("");
   const [connected, setIsConnected] = useState(false);
@@ -61,6 +67,7 @@ export function PactProvider({ children }: { children: ReactNode }) {
   const [pacts, setPacts] = useState<Pact[]>([]);
   const [aiAutoApprove, setAiAutoApprove] = useState(false);
   const [aiLimit, setAiLimit] = useState(0);
+  const [changes, setChanges] = useState(0);
   const refresh = useCallback(async () => {
     try {
       const [{ agreements }, { dashboard }] = await Promise.all([
@@ -103,6 +110,14 @@ export function PactProvider({ children }: { children: ReactNode }) {
     setWrongNetwork(false);
     if (address) setBalance(await getWalletBalanceMon(address));
   }, [address]);
+  const logout = useCallback(async () => {
+    await signOut();
+    setUser(null);
+    setIsConnected(false);
+    setAddress("");
+    setBalance(0);
+    setPacts([]);
+  }, []);
   const signIn = useCallback(async () => {
     await connectWallet();
     await refresh();
@@ -179,8 +194,15 @@ export function PactProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
   useEffect(() => {
+    if (loading || user || isPublicPath(pathname)) return;
+    void signOut()
+      .catch(() => undefined)
+      .finally(() => router.replace(LOGIN_PATH));
+  }, [loading, user, pathname, router]);
+  useEffect(() => {
     if (!user) return;
     const update = () => {
+      setChanges((count) => count + 1);
       void refresh();
     };
     const unsubscribe = subscribeToChanges(update);
@@ -203,10 +225,12 @@ export function PactProvider({ children }: { children: ReactNode }) {
         pacts,
         aiAutoApprove,
         aiLimit,
+        changes,
         setConnected,
         connectWallet,
         switchNetwork,
         signIn,
+        logout,
         refresh,
       }}
     >

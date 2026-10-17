@@ -4,21 +4,16 @@ import { usePathname } from "next/navigation";
 import { motion, MotionConfig } from "motion/react";
 import { Toaster } from "sonner";
 import { PactProvider, usePact } from "@/lib/client/pact-context";
+import { isPublicPath, ONBOARDING_PATH } from "@/lib/shared/routes";
 import { Header, Dock } from "./Shell";
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const onboarding = [
-    "/iniciar-sesion",
-    "/registro",
-    "/perfil",
-    "/terminos",
-    "/privacidad",
-  ].includes(pathname);
+  const onboarding = isPublicPath(pathname) || pathname === ONBOARDING_PATH;
   const { error } = usePact();
   return (
     <div className={onboarding ? "onboarding-shell" : "min-h-screen"}>
-      <Header />
+      <Header minimal={onboarding} />
       <main
         className={
           onboarding
