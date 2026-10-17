@@ -51,7 +51,7 @@ app/
 
 1. `import "server-only"` / `import "client-only"` en la primera línea: si un módulo cruza al lado equivocado, **el build falla**.
 2. Regla de ESLint (`no-restricted-imports`): `components/`, `lib/client` y `lib/shared` no pueden importar `lib/server`, y
-   `lib/server` no puede importar `lib/client`. `npm run lint` lo verifica.
+   `lib/server` no puede importar `lib/client`. `pnpm lint` lo verifica.
 3. Solo `lib/server/env.ts` lee `process.env` privado. Ninguna clave usa el prefijo `NEXT_PUBLIC_`.
 
 ## Flujo de una acción
@@ -70,9 +70,9 @@ El servidor nunca ve ni firma transacciones. La IA solo lee y sugiere.
 ## Scripts
 
 ```sh
-npm run dev      # http://localhost:3000
-npm run lint
-npm run build
+pnpm dev      # http://localhost:3000
+pnpm lint
+pnpm build
 ```
 
 Variables en `.env.example`; copiar a `.env.local`.

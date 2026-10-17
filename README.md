@@ -34,7 +34,7 @@ firmadas por el cliente o el proveedor contra el contrato.
 
 ```sh
 # app
-cd app && cp .env.example .env.local && npm run dev          # http://localhost:3000
+cd app && cp .env.example .env.local && pnpm install && pnpm dev          # http://localhost:3000
 
 # ia: ver el README del repo pact-ai (uvicorn en el puerto 8000)
 
