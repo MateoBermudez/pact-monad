@@ -37,6 +37,7 @@ const provider = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 const user: SessionUser = {
   id: "client",
   username: null,
+  roles: ["client"],
   wallet: client,
   email: null,
   avatarUrl: null,

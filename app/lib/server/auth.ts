@@ -4,9 +4,9 @@ import { cookies, headers } from "next/headers";
 import { getAddress, isAddress, verifyMessage } from "ethers";
 import { query } from "@/lib/server/db";
 import { CHAIN_ID } from "@/lib/shared/chain";
-import type { AuthMethod, SessionUser } from "@/lib/shared/auth";
+import { SESSION_COOKIE, type AuthMethod, type Role, type SessionUser } from "@/lib/shared/auth";
 
-export const SESSION_COOKIE = "pact_session";
+export { SESSION_COOKIE };
 export const API_KEY_PREFIX = "pact_ak_";
 
 const CHALLENGE_TTL_MS = 5 * 60_000;
@@ -15,11 +15,12 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60_000;
 const RENEW_AFTER_MS = 24 * 60 * 60_000;
 const SESSION_MAX_AGE_DAYS = 90;
 
-export const USER_COLUMNS = "id, username, wallet, email, avatar_url, display_name, is_agent";
+export const USER_COLUMNS = "id, username, roles, wallet, email, avatar_url, display_name, is_agent";
 
 export type UserRow = {
   id: string;
   username: string | null;
+  roles: Role[];
   wallet: string | null;
   email: string | null;
   avatar_url: string | null;
@@ -32,6 +33,7 @@ export const sha256 = (value: string) => createHash("sha256").update(value).dige
 export const toSessionUser = (row: UserRow, via: AuthMethod): SessionUser => ({
   id: row.id,
   username: row.username,
+  roles: row.roles,
   wallet: row.wallet,
   email: row.email,
   avatarUrl: row.avatar_url,
@@ -131,7 +133,7 @@ async function userFromCookie(): Promise<SessionUser | null> {
 
   const tokenHash = sha256(token);
   const [row] = await query<UserRow & { last_seen_at: Date }>(
-    `select u.id, u.username, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, s.last_seen_at
+    `select u.id, u.username, u.roles, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, s.last_seen_at
        from sessions s join users u on u.id = s.user_id
       where s.token_hash = $1 and s.expires_at > now()
         and s.created_at > now() - make_interval(days => $2)`,
@@ -153,7 +155,7 @@ async function userFromApiKey(authorization: string): Promise<SessionUser | null
   if (!token?.startsWith(API_KEY_PREFIX)) return null;
 
   const [row] = await query<UserRow & { key_id: string }>(
-    `select u.id, u.username, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, k.id as key_id
+    `select u.id, u.username, u.roles, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, k.id as key_id
        from api_keys k join users u on u.id = k.user_id
       where k.key_hash = $1 and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
         and u.is_agent`,

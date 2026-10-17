@@ -7,6 +7,7 @@ export async function getOnboardingStatus(user: SessionUser): Promise<Onboarding
     user.id,
   ]);
   const needsUsername = user.username === null;
-  const needsSkills = row.skills === 0;
-  return { needsUsername, needsSkills, complete: !needsUsername && !needsSkills };
+  const needsRole = user.roles.length === 0;
+  const needsSkills = user.roles.includes("provider") && row.skills === 0;
+  return { needsUsername, needsSkills, needsRole, complete: !needsUsername && !needsRole && !needsSkills };
 }

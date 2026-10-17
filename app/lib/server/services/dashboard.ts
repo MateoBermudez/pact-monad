@@ -135,7 +135,9 @@ export async function loadChangeVersion(userId: string): Promise<string> {
                    left join listings l on l.id = a.listing_id where a.provider_id = $1 or l.client_id = $1), 0),
        coalesce((select extract(epoch from max(d.created_at)) from decisions d
                    join agreements a on a.id = d.agreement_id where a.client_id = $1 or a.provider_id = $1), 0),
-       coalesce((select extract(epoch from updated_at) from ai_settings where user_id = $1), 0)
+       coalesce((select extract(epoch from updated_at) from ai_settings where user_id = $1), 0),
+       coalesce((select max(id) from notifications where user_id = $1), 0),
+       (select count(*) from notifications where user_id = $1 and read_at is null)
      ) as version`,
     [userId],
   );

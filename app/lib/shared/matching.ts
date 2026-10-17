@@ -91,6 +91,14 @@ function categoryMatches(category: string | null, skills: SkillRef[]): boolean {
   return skills.some((skill) => normalizeText(skill.category).trim() === wanted);
 }
 
+export function isRelevantListing(
+  listing: Pick<ListingProfile, "title" | "category" | "keywords">,
+  provider: ProviderProfile,
+): boolean {
+  const { shared } = overlap(listingTerms(listing), providerTerms(provider));
+  return shared.length > 0 || categoryMatches(listing.category, provider.skills);
+}
+
 const reputationFraction = (score: number) => clamp01((score - 1) / 4);
 const experienceFraction = (completed: number) => clamp01(Math.log2(1 + completed) / 4);
 

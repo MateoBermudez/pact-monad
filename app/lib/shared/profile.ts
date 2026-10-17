@@ -1,3 +1,5 @@
+import type { Role } from "@/lib/shared/auth";
+
 export const MAX_SKILLS = 10;
 export const MAX_LINKS = 5;
 export const AVAILABILITIES = ["available", "busy", "unavailable"] as const;
@@ -31,6 +33,7 @@ export type PortfolioItemDto = {
 export type ProfileDto = {
   id: string;
   username: string | null;
+  roles: Role[];
   avatarUrl: string | null;
   location: string | null;
   availability: Availability;

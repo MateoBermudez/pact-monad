@@ -1,6 +1,6 @@
 import "server-only";
 import { pool, query, withTransaction } from "@/lib/server/db";
-import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
+import { ApiError, conflict, forbidden, notFound, requireRole } from "@/lib/server/http";
 import { getListing, requireListing, requireOwnListing } from "@/lib/server/services/listings";
 import { loadProviderSummaries } from "@/lib/server/services/profiles";
 import { emitWebhook } from "@/lib/server/services/webhooks";
@@ -50,6 +50,7 @@ async function toDtos(rows: ApplicationRow[]): Promise<ApplicationDto[]> {
 }
 
 export async function applyToListing(user: SessionUser, listingId: string, input: ApplyInput): Promise<ApplicationDto> {
+  requireRole(user, "provider");
   const listing = await requireListing(pool(), listingId);
   if (listing.client_id === user.id) throw forbidden("No puedes postularte a tu propia solicitud");
   if (listing.status !== "open") throw conflict("La solicitud ya no recibe postulaciones");

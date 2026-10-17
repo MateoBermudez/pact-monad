@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  isRelevantListing,
   listingTerms,
   providerTerms,
   scoreApplicant,
@@ -138,5 +139,29 @@ describe("términos", () => {
   it("la solicitud toma palabras clave y título", () => {
     const terms = listingTerms(logoListing);
     for (const expected of ["logo", "branding", "cafeteria"]) assert.ok(terms.has(expected), expected);
+  });
+});
+
+describe("isRelevantListing", () => {
+  const designer: ProviderProfile = {
+    keywords: ["ilustracion digital"],
+    skills: [{ slug: "graphic-design", name: "Diseño gráfico", category: "Diseño", level: 5 }],
+  };
+
+  it("avisa cuando comparten términos con el título o las palabras clave", () => {
+    assert.equal(isRelevantListing({ title: "Logo e ilustración digital", category: null, keywords: [] }, designer), true);
+    assert.equal(isRelevantListing({ title: "Necesito algo", category: null, keywords: ["diseno grafico"] }, designer), true);
+  });
+
+  it("avisa cuando la categoría coincide con la de sus habilidades", () => {
+    assert.equal(isRelevantListing({ title: "Afiche para evento", category: "Diseño", keywords: [] }, designer), true);
+  });
+
+  it("no avisa si no hay ninguna coincidencia real", () => {
+    assert.equal(isRelevantListing({ title: "API REST con JWT", category: "Programación", keywords: ["nodejs"] }, designer), false);
+  });
+
+  it("no avisa a un perfil sin habilidades ni palabras clave", () => {
+    assert.equal(isRelevantListing({ title: "Logo", category: "Diseño", keywords: ["logo"] }, { keywords: [], skills: [] }), false);
   });
 });
