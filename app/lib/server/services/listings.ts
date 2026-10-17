@@ -1,7 +1,8 @@
 import "server-only";
 import { pool, query, withTransaction, type Queryable } from "@/lib/server/db";
-import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
+import { ApiError, conflict, forbidden, notFound, requireRole } from "@/lib/server/http";
 import { requireOwnedFile } from "@/lib/server/services/files";
+import { notifyMatchingProviders } from "@/lib/server/services/notifications";
 import { loadProfile } from "@/lib/server/services/profiles";
 import { computeRulesHash, loadRules, saveRulesVersion } from "@/lib/server/services/rules";
 import type { SessionUser } from "@/lib/shared/auth";
@@ -108,6 +109,7 @@ async function myApplicationsByListing(
 }
 
 export async function createListing(user: SessionUser, input: CreateListingInput): Promise<ListingDto> {
+  requireRole(user, "client");
   if (input.briefFileId) await requireOwnedFile(user.id, input.briefFileId, "brief");
 
   const [created] = await query<{ id: string }>(
@@ -238,6 +240,18 @@ export async function publishListing(user: SessionUser, listingId: string): Prom
       "update listings set status = 'open', rules_hash = $2, rules_confirmed_at = now() where id = $1",
       [listingId, computeRulesHash(listingId, row.rules_version, rules)],
     );
+
+    await notifyMatchingProviders(client, {
+      id: listingId,
+      clientId: user.id,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      keywords: row.keywords,
+      budgetMon: row.budget_mon,
+      clientScore: row.client_score,
+      createdAt: row.created_at,
+    });
   });
   return getListing(user, listingId);
 }

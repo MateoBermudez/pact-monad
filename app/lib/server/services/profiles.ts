@@ -1,6 +1,8 @@
 import "server-only";
+import type { PoolClient } from "pg";
 import { query, withTransaction } from "@/lib/server/db";
 import { ApiError, notFound } from "@/lib/server/http";
+import type { Role } from "@/lib/shared/auth";
 import { normalizeKeywords } from "@/lib/shared/keywords";
 import type {
   Availability,
@@ -16,11 +18,12 @@ import type {
 import type { UpdateProfileInput } from "@/lib/shared/schemas";
 
 const PROFILE_COLUMNS =
-  "id, username, avatar_url, location, availability, links, wallet, display_name, headline, bio, keywords, is_agent";
+  "id, username, roles, avatar_url, location, availability, links, wallet, display_name, headline, bio, keywords, is_agent";
 
 type UserRow = {
   id: string;
   username: string | null;
+  roles: Role[];
   avatar_url: string | null;
   location: string | null;
   availability: Availability;
@@ -95,6 +98,7 @@ export async function loadProfile(userId: string): Promise<ProfileDto> {
   return {
     id: user.id,
     username: user.username,
+    roles: user.roles,
     avatarUrl: user.avatar_url,
     location: user.location,
     availability: user.availability,
@@ -118,6 +122,29 @@ export async function loadPublicProfile(userId: string): Promise<PublicProfileDt
   return { ...profile, portfolio: portfolio.map(toPortfolioItem) };
 }
 
+async function assertRolesRemovable(client: PoolClient, userId: string, removed: Role[]): Promise<void> {
+  if (removed.includes("client")) {
+    const { rows } = await client.query<{ busy: boolean }>(
+      `select (exists (select 1 from listings where client_id = $1 and status in ('open', 'selecting', 'awarded'))
+               or exists (select 1 from agreements where client_id = $1 and status in ('Created', 'Accepted', 'Delivered'))) as busy`,
+      [userId],
+    );
+    if (rows[0].busy) {
+      throw new ApiError(409, "role_in_use", "Tienes solicitudes o acuerdos activos como cliente; termínalos antes de quitar ese rol");
+    }
+  }
+  if (removed.includes("provider")) {
+    const { rows } = await client.query<{ busy: boolean }>(
+      `select (exists (select 1 from applications where provider_id = $1 and status in ('submitted', 'shortlisted', 'selected'))
+               or exists (select 1 from agreements where provider_id = $1 and status in ('Created', 'Accepted', 'Delivered'))) as busy`,
+      [userId],
+    );
+    if (rows[0].busy) {
+      throw new ApiError(409, "role_in_use", "Tienes postulaciones o acuerdos activos como prestador; termínalos antes de quitar ese rol");
+    }
+  }
+}
+
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileDto> {
   await withTransaction(async (client) => {
     const { rows } = await client.query<UserRow>(
@@ -127,9 +154,16 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
     const current = rows[0];
     if (!current) throw notFound("Usuario");
 
+    const nextRoles = input.roles ?? current.roles;
+    await assertRolesRemovable(
+      client,
+      userId,
+      current.roles.filter((role) => !nextRoles.includes(role)),
+    );
+
     await client.query(
       `update users set display_name = $2, headline = $3, bio = $4, keywords = $5, is_agent = $6,
-                        avatar_url = $7, location = $8, availability = $9, links = $10::jsonb
+                        avatar_url = $7, location = $8, availability = $9, links = $10::jsonb, roles = $11
         where id = $1`,
       [
         userId,
@@ -142,6 +176,7 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
         input.location === undefined ? current.location : input.location,
         input.availability === undefined ? current.availability : input.availability,
         JSON.stringify(input.links === undefined ? current.links : input.links),
+        nextRoles,
       ],
     );
 

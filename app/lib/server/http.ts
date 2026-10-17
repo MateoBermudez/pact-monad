@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { DatabaseError } from "pg";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/server/auth";
-import type { SessionUser } from "@/lib/shared/auth";
+import type { Role, SessionUser } from "@/lib/shared/auth";
 
 export class ApiError extends Error {
   constructor(
@@ -19,6 +19,14 @@ export class ApiError extends Error {
 export const notFound = (what = "resource") => new ApiError(404, "not_found", `${what} no encontrado`);
 export const forbidden = (message = "No tienes permiso para esto") => new ApiError(403, "forbidden", message);
 export const conflict = (message: string) => new ApiError(409, "conflict", message);
+
+const ROLE_LABELS: Record<Role, string> = { client: "cliente", provider: "prestador de servicios" };
+
+export function requireRole(user: SessionUser, role: Role): void {
+  if (!user.roles.includes(role)) {
+    throw new ApiError(403, "role_required", `Activa tu rol de ${ROLE_LABELS[role]} en tu perfil para hacer esto`);
+  }
+}
 
 export function requireWallet(user: SessionUser): string {
   if (!user.wallet) throw new ApiError(409, "wallet_required", "Vincula una wallet para operar en la cadena");

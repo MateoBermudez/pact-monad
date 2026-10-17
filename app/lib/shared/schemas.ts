@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
+import { OAUTH_PROVIDERS, ROLES } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
 import { AVAILABILITIES, MAX_LINKS, MAX_SKILLS } from "@/lib/shared/profile";
 import { normalizeUsername, usernameError } from "@/lib/shared/username";
@@ -61,7 +61,21 @@ export const requestUploadSchema = z.object({
 });
 export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
 
+export const rolesSchema = z
+  .array(z.enum(ROLES))
+  .min(1, "Elige al menos un rol")
+  .transform((roles) => ROLES.filter((role) => roles.includes(role)));
+
+export const markNotificationsReadSchema = z.object({
+  ids: z.array(z.coerce.number().int().positive()).max(200).optional(),
+});
+
+export const listNotificationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(30),
+});
+
 export const updateProfileSchema = z.object({
+  roles: rolesSchema.optional(),
   avatarUrl: httpsUrlSchema.nullable().optional(),
   location: optionalText(80),
   availability: z.enum(AVAILABILITIES).optional(),

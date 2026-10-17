@@ -55,9 +55,10 @@ describe("acceso y perfil", () => {
         return reply({
           profile: {
             username: "mateo",
+            roles: ["client", "provider"],
             skills: [{ slug: "design", name: "Diseño", level: 4 }],
             keywords: [],
-            headline: null,
+            headline: "Diseñador gráfico",
           },
         });
       return reply({});
@@ -85,7 +86,7 @@ describe("acceso y perfil", () => {
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({
-          headline: "Cliente",
+          roles: ["client"],
           skills: [{ slug: "design", level: 4 }],
           keywords: ["Fotografía"],
         }),
@@ -100,5 +101,44 @@ describe("acceso y perfil", () => {
     expect(
       screen.getByText(/Mateo Bermudez Cuartas · Colombia/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("roles en el perfil", () => {
+  const profile = (roles: string[]) => ({
+    profile: { username: "mateo", roles, skills: [], keywords: [], headline: "Mi titular" },
+  });
+  const fetcherFor = (roles: string[]) =>
+    vi.fn((path: string, init?: RequestInit) => {
+      if (path === "/api/skills") return reply({ skills: [] });
+      if (path === "/api/profile" && !init?.method) return reply(profile(roles));
+      return reply({});
+    });
+
+  it("muestra el rol real de la cuenta y no lo confunde con el titular", async () => {
+    vi.stubGlobal("fetch", fetcherFor(["provider"]));
+    render(<ProfileSetup />);
+    await waitFor(() => expect(screen.getByLabelText("Nombre de usuario")).toHaveValue("mateo"));
+    expect(screen.getByRole("radio", { name: /Prestador de servicios/ })).toBeChecked();
+  });
+
+  it("una cuenta solo cliente puede guardar sin habilidades y no pisa su titular", async () => {
+    const fetcher = fetcherFor(["client"]);
+    vi.stubGlobal("fetch", fetcher);
+    render(<ProfileSetup />);
+    await waitFor(() => expect(screen.getByLabelText("Nombre de usuario")).toHaveValue("mateo"));
+    const save = screen.getByRole("button", { name: "Guardar y entrar a PACT" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+    const put = fetcher.mock.calls.find(([path, init]) => path === "/api/profile" && init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ roles: ["client"], skills: [], keywords: [] });
+  });
+
+  it("quien ofrece servicios no puede guardar sin ninguna habilidad", async () => {
+    vi.stubGlobal("fetch", fetcherFor(["provider"]));
+    render(<ProfileSetup />);
+    await waitFor(() => expect(screen.getByLabelText("Nombre de usuario")).toHaveValue("mateo"));
+    expect(screen.getByRole("button", { name: "Guardar y entrar a PACT" })).toBeDisabled();
   });
 });

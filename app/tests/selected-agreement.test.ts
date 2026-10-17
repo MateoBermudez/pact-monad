@@ -20,6 +20,7 @@ const user: SessionUser = {
   id: "client",
   wallet: "0x1111111111111111111111111111111111111111",
   username: "client",
+  roles: ["client"],
   email: null,
   avatarUrl: null,
   displayName: null,

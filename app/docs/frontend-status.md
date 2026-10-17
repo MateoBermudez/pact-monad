@@ -46,3 +46,5 @@ estado, revisar Mis acuerdos y el explorer antes de volver a firmar.
 Configurar y probar servicios reales. No se aplicaron migraciones ni se enviaron
 transacciones reales durante esta ampliación. Esta copia no tiene `.env.local`.
 Ver [demo-checklist.md](demo-checklist.md) para los pasos del equipo.
+
+Ver también `roles-notificaciones.md` (roles, acceso y avisos) y `pendientes.md` (lo que falta).

@@ -2,7 +2,7 @@
 import Image from "next/image";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Home,
@@ -20,8 +20,12 @@ import { type ReactNode } from "react";
 import { short, usePact } from "@/lib/client/pact-context";
 import { useHydrated } from "@/lib/client/use-hydrated";
 import { CountUp } from "@/components/Effects";
+import { NotificationBell } from "@/components/NotificationBell";
 
-export function Header() {
+export type HeaderVariant = "full" | "minimal" | "guest";
+
+export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
+  const router = useRouter();
   const {
     address,
     connected,
@@ -31,6 +35,7 @@ export function Header() {
     balance,
     signedIn: sessionActive,
     loading: sessionLoading,
+    logout,
   } = usePact();
   const hydrated = useHydrated();
   const loading = !hydrated || sessionLoading;
@@ -38,7 +43,7 @@ export function Header() {
   return (
     <>
       <AnimatePresence>
-        {connected && wrongNetwork && (
+        {variant === "full" && connected && wrongNetwork && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -85,7 +90,9 @@ export function Header() {
               className="h-7 w-auto"
             />
           </Link>
+          {variant === "full" && (
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Link
               href="/cuenta"
               aria-label="Mi perfil"
@@ -93,6 +100,17 @@ export function Header() {
             >
               <User className="h-5 w-5" />
             </Link>
+            {signedIn && (
+              <button
+                type="button"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
+                onClick={() => void logout().then(() => router.replace("/iniciar-sesion"))}
+                className="press rounded-full bg-primary/30 p-2"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            )}
             <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-card/80 px-4 text-xs text-muted-foreground shadow-sm ring-1 ring-border backdrop-blur">
               <span className="relative flex h-2 w-2">
                 <span
@@ -136,6 +154,17 @@ export function Header() {
               </Link>
             )}
           </div>
+          )}
+          {variant === "guest" && (
+            <div className="flex items-center gap-2">
+              <Link href="/iniciar-sesion" className="press rounded-full px-4 py-2 text-sm font-semibold">
+                Iniciar sesión
+              </Link>
+              <Link href="/registro" className="btn-primary h-10 px-4 py-0 text-xs">
+                Registrarme
+              </Link>
+            </div>
+          )}
         </div>
       </header>
     </>

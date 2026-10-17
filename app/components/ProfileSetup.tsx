@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { api, jsonRequest } from "@/lib/client/api";
+import type { Role } from "@/lib/shared/auth";
 import type { ProfileDto, SkillDto } from "@/lib/shared/profile";
 
 const roles = [
@@ -20,6 +21,16 @@ const roles = [
   "Prestador de servicios",
   "Cliente y prestador",
 ] as const;
+const ROLES_BY_LABEL: Record<(typeof roles)[number], Role[]> = {
+  Cliente: ["client"],
+  "Prestador de servicios": ["provider"],
+  "Cliente y prestador": ["client", "provider"],
+};
+const roleLabelFor = (value: Role[]): (typeof roles)[number] => {
+  if (value.length === 2) return roles[2];
+  return value[0] === "client" ? roles[0] : value[0] === "provider" ? roles[1] : roles[2];
+};
+const offersServices = (label: string) => ROLES_BY_LABEL[label as (typeof roles)[number]]?.includes("provider") ?? true;
 type Profile = ProfileDto & { username?: string | null };
 type Availability = { available: boolean; message: string | null };
 export function ProfileSetup() {
@@ -68,8 +79,7 @@ export function ProfileSetup() {
             ]),
           ].slice(0, 10),
         );
-        if (profile.headline && roles.some((r) => r === profile.headline))
-          setRole(profile.headline);
+        if (profile.roles.length > 0) setRole(roleLabelFor(profile.roles));
       })
       .catch(() => {
         if (active) setError("Inicia sesión para cargar y guardar tu perfil.");
@@ -124,7 +134,7 @@ export function ProfileSetup() {
       saving ||
       !authenticated ||
       !(fixedName || available) ||
-      selected.length === 0
+      (offersServices(role) && selected.length === 0)
     )
       return;
     setSaving(true);
@@ -143,7 +153,7 @@ export function ProfileSetup() {
       await api(
         "/api/profile",
         jsonRequest("PUT", {
-          headline: role,
+          roles: ROLES_BY_LABEL[role as (typeof roles)[number]],
           skills: known,
           keywords: selected.filter(
             (label) => !catalog.some((s) => s.name === label),
@@ -265,7 +275,11 @@ export function ProfileSetup() {
               </span>
             ))}
           </div>
-          <p className="field-help">Añade al menos una habilidad. Máximo 10.</p>
+          <p className="field-help">
+            {offersServices(role)
+              ? "Añade al menos una habilidad. Máximo 10."
+              : "Opcional si solo vas a contratar. Máximo 10."}
+          </p>
           <fieldset>
             <legend>¿Cómo quieres usar PACT?</legend>
             <div className="role-options">
@@ -306,8 +320,9 @@ export function ProfileSetup() {
             </div>
           </fieldset>
           <p className="field-help">
-            Esta elección se muestra en tu perfil; puedes contratar y ofrecer
-            servicios con cualquier opción.
+            Define qué puedes hacer en PACT: crear solicitudes si eres cliente,
+            y postularte y recibir avisos de solicitudes que encajan contigo si
+            eres prestador. Puedes cambiarlo cuando quieras.
           </p>
           {error && (
             <p role="alert" className="auth-error">
@@ -324,7 +339,7 @@ export function ProfileSetup() {
               saving ||
               !authenticated ||
               !(fixedName || available) ||
-              selected.length === 0
+              (offersServices(role) && selected.length === 0)
             }
           >
             {saving ? "Guardando…" : "Guardar y entrar a PACT"}

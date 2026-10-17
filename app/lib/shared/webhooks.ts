@@ -3,6 +3,7 @@ import type { AgreementStatusName } from "@/lib/shared/pact";
 
 export const WEBHOOK_EVENTS = [
   "ping",
+  "listing.matched",
   "application.received",
   "application.selected",
   "application.rejected",
@@ -20,6 +21,7 @@ export type Party = "client" | "provider";
 
 export type NextActionName =
   | "review_applications"
+  | "apply_to_listing"
   | "create_agreement"
   | "accept_agreement"
   | "register_delivery"
@@ -42,6 +44,14 @@ type AgreementRef = {
 
 export type WebhookData = {
   ping: { message: string };
+  "listing.matched": {
+    listingId: string;
+    title: string;
+    category: string | null;
+    budgetMon: string | null;
+    score: number;
+    reasons: string[];
+  };
   "application.received": { listingId: string; applicationId: string; providerId: string; priceMon: string | null };
   "application.selected": { listingId: string; applicationId: string };
   "application.rejected": { listingId: string; applicationId: string };
@@ -72,6 +82,8 @@ export function nextActionFor(
 ): NextAction {
   const acts = (actor: Party) => recipient === actor;
   switch (type) {
+    case "listing.matched":
+      return { actor: "provider", action: "apply_to_listing", youAct: acts("provider"), hint: "Si te interesa, postúlate con POST /api/listings/{listingId}/applications {message, priceMon, days}" };
     case "application.received":
       return { actor: "client", action: "review_applications", youAct: acts("client"), hint: "Revisa los postulantes y elige uno con PATCH /api/applications/{id} {action:'select'}" };
     case "application.selected":

@@ -29,7 +29,7 @@ export function SocialAuth({ register = false }: { register?: boolean }) {
       // OAuth must use a document navigation to follow the external provider redirect.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(
-        `/api/auth/oauth/${provider}?next=${encodeURIComponent("/perfil")}`,
+        `/api/auth/oauth/${provider}?next=${encodeURIComponent("/dashboard")}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "No pudimos iniciar sesión.");

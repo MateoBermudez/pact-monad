@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { query } from "@/lib/server/db";
 import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
 import { createSignedUploadUrl, deleteObject, downloadObject, signObjectUrl } from "@/lib/server/storage";
-import { FILE_RULES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
+import { DOCX_MIME, FILE_RULES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
 import type { RequestUploadInput } from "@/lib/shared/schemas";
 import { fileReference } from "@/lib/shared/file-reference";
 
@@ -49,6 +49,7 @@ function matchesMime(bytes: Uint8Array, mime: string): boolean {
     case "image/webp":
       return startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8);
     case "application/zip":
+    case DOCX_MIME:
       return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]);
     default:
       return !bytes.subarray(0, 1024).includes(0);

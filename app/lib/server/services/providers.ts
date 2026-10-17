@@ -21,7 +21,7 @@ export async function searchProviders(
 
   const candidates = await query<{ id: string }>(
     `select u.id from users u
-      where ($1::uuid is null or u.id <> $1)
+      where ($1::uuid is null or u.id <> $1) and 'provider' = any(u.roles)
         and (u.is_agent or cardinality(u.keywords) > 0 or exists (select 1 from user_skills us where us.user_id = u.id))
         and ($2::text[] = '{}' or exists (
               select 1 from user_skills us join skills s on s.id = us.skill_id

@@ -13,6 +13,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { usePact } from "@/lib/client/pact-context";
+import { useHydrated } from "@/lib/client/use-hydrated";
+import { summarizePacts } from "@/lib/shared/ui-pact";
 import { IllustrationHero } from "@/components/Illustrations";
 
 const STEPS = [
@@ -47,8 +49,25 @@ const rise: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
 };
 
+const GENERIC_STATS: [string, string][] = [
+  ["3", "pasos para crear"],
+  ["MON", "de Monad Testnet"],
+  ["Tu firma", "para confirmar"],
+];
+
 export default function Landing() {
-  const { signedIn } = usePact();
+  const { signedIn: sessionActive, pacts } = usePact();
+  const hydrated = useHydrated();
+  const signedIn = hydrated && sessionActive;
+  const summary = summarizePacts(pacts);
+  const stats: [string, string][] = signedIn
+    ? [
+        [String(summary.inProgress), "acuerdos en curso"],
+        [String(summary.needsAction), "requieren tu acción"],
+        [`${summary.lockedMon} MON`, "bloqueados en escrow"],
+        [`${summary.earnedMon} MON`, "cobrados como proveedor"],
+      ]
+    : GENERIC_STATS;
   return (
     <div className="space-y-14 pt-2">
       {/* Onboarding-style hero: lime panel, big display headline, round arrow CTA */}
@@ -88,7 +107,7 @@ export default function Landing() {
               className="max-w-sm text-sm text-primary-foreground/75 sm:text-base"
             >
               Un acuerdo con dinero bloqueado en escrow sobre Monad. Sin
-              intermediarios, sin cuentas: solo tu wallet.
+              intermediarios: el pago se libera cuando se cumple lo acordado.
             </motion.p>
             <motion.div
               variants={rise}
@@ -98,14 +117,14 @@ export default function Landing() {
                 href={signedIn ? "/dashboard" : "/iniciar-sesion"}
                 className="text-sm font-semibold text-primary-foreground/70 underline-offset-4 hover:text-primary-foreground hover:underline"
               >
-                Ver mis acuerdos
+                {signedIn ? "Ver mis acuerdos" : "Iniciar sesión"}
               </Link>
               <Link
-                href="/crear"
-                aria-label="Crear un acuerdo"
+                href={signedIn ? "/crear" : "/registro"}
+                aria-label={signedIn ? "Crear un acuerdo" : "Crear una cuenta"}
                 className="group flex items-center gap-2.5 rounded-full bg-ink py-1.5 pl-4 pr-1.5 text-sm font-bold text-ink-foreground transition-transform active:scale-95"
               >
-                Empezar
+                {signedIn ? "Empezar" : "Registrarme"}
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-ink transition-transform duration-300 group-hover:rotate-45">
                   <ArrowUpRight className="h-4 w-4" strokeWidth={2.6} />
                 </span>
@@ -123,28 +142,23 @@ export default function Landing() {
         </div>
       </section>
 
-      <motion.section
-        variants={container}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-60px" }}
-        className="grid gap-4 sm:grid-cols-3"
+      <section
+        className={signedIn ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4" : "grid gap-4 sm:grid-cols-3"}
       >
-        {[
-          ["3", "pasos para crear"],
-          ["MON", "de Monad Testnet"],
-          ["Tu firma", "para confirmar"],
-        ].map(([v, l]) => (
+        {stats.map(([v, l], index) => (
           <motion.div
-            variants={rise}
             key={l}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.4, ease: "easeOut", delay: index * 0.06 }}
             className="card border-black shadow-[0_4px_0_#000] text-center"
           >
             <p className="font-display text-3xl font-bold">{v}</p>
             <p className="text-sm text-muted-foreground">{l}</p>
           </motion.div>
         ))}
-      </motion.section>
+      </section>
 
       <section className="space-y-6">
         <h2 className="font-display text-2xl font-bold">Cómo funciona</h2>
@@ -185,22 +199,41 @@ export default function Landing() {
       >
         <div className="space-y-2">
           <p className="flex items-center gap-2 text-sm text-primary">
-            <ShieldCheck className="h-4 w-4" /> Tu wallet es tu identidad
+            <ShieldCheck className="h-4 w-4" />{" "}
+            {signedIn ? "Tu wallet firma cada pago" : "Empieza en segundos"}
           </p>
           <p className="font-display text-2xl font-bold">
-            Sin contraseñas. Sin formularios.
+            {signedIn ? "Tú decides cuándo se libera." : "Sin contraseñas. Sin formularios largos."}
           </p>
           <p className="text-sm text-ink-foreground/60">
-            Conecta MetaMask y empieza en segundos.
+            {signedIn
+              ? "Revisa tus acuerdos y firma desde tu wallet."
+              : "Entra con Google o GitHub y conecta tu wallet cuando necesites firmar."}
           </p>
         </div>
-        <Link
-          href={signedIn ? "/dashboard" : "/iniciar-sesion"}
-          className="press flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
-        >
-          <Wallet className="h-4 w-4" />{" "}
-          {signedIn ? "Ir al dashboard" : "Iniciar sesión"}
-        </Link>
+        {signedIn ? (
+          <Link
+            href="/dashboard"
+            className="press flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+          >
+            <Wallet className="h-4 w-4" /> Ir al dashboard
+          </Link>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/iniciar-sesion"
+              className="press rounded-full border border-ink-foreground/30 px-5 py-3 text-sm font-semibold text-ink-foreground"
+            >
+              Iniciar sesión
+            </Link>
+            <Link
+              href="/registro"
+              className="press flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+            >
+              <Wallet className="h-4 w-4" /> Registrarme
+            </Link>
+          </div>
+        )}
       </motion.section>
     </div>
   );

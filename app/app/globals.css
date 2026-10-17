@@ -387,6 +387,18 @@
   right: -15px;
   bottom: -2px;
   width: 52%;
+  height: auto;
+  object-fit: contain;
+}
+.auth-illustration-register {
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  border-top-left-radius: 14px;
+  object-fit: cover;
+}
+.auth-hero:has(.auth-illustration-register) .auth-hero-copy {
+  max-width: 46%;
 }
 .auth-card {
   background: #fffefefa;
@@ -697,6 +709,12 @@
     width: 46%;
     max-height: 290px;
   }
+  .auth-illustration-register {
+    width: 48%;
+  }
+  .auth-hero:has(.auth-illustration-register) .auth-hero-copy {
+    max-width: 48%;
+  }
   .auth-hero h1 {
     font-size: 40px;
   }
@@ -721,6 +739,24 @@
   .auth-illustration {
     width: 57%;
     right: -24px;
+  }
+  .auth-hero:has(.auth-illustration-register) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .auth-hero:has(.auth-illustration-register) .auth-hero-copy {
+    max-width: 100%;
+  }
+  .auth-illustration-register {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: calc(100% + 36px);
+    max-width: none;
+    max-height: none;
+    margin: 18px -18px -22px;
+    border-radius: 0;
   }
   .role-options {
     grid-template-columns: 1fr;
