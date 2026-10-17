@@ -343,6 +343,17 @@
   background: #f4ffec80;
   box-shadow: 0 5px 20px #27351810;
 }
+.auth-screen-frame {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.auth-screen-frame > .onboarding-shell {
+  width: 100%;
+  margin: 0;
+}
 .auth-layout {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -396,6 +407,11 @@
   width: 50%;
   border-top-left-radius: 14px;
   object-fit: cover;
+}
+.auth-illustration.auth-illustration-login {
+  right: 10px;
+  bottom: 10px;
+  width: 50%;
 }
 .auth-hero:has(.auth-illustration-register) .auth-hero-copy {
   max-width: 46%;
