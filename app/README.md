@@ -196,8 +196,10 @@ Está pensado para funcionar sin servidor propio: nada depende de un proceso enc
    `Prueba : HTTP 200`. Con `--status` ves la configuración y las últimas llamadas; con `--off` se apaga.
    Usa el dominio de **producción**: si la protección de despliegues está activa, Vercel responde 401 a las llamadas de
    Supabase.
-5. **El servicio de IA (`pact-ai`) va aparte** (Python): Render, Railway, Fly o Vercel Python. Definir `PACT_AI_SHARED_SECRET`
-   allí y `AI_API_SECRET` aquí. Ojo con los planes gratuitos que se duermen: el primer arranque tarda y afecta la demo.
+5. **El servicio de IA (`pact-ai`) va aparte** y también está en Vercel (Python, Fluid compute). Definir `PACT_AI_SHARED_SECRET`
+   allí y `AI_API_SECRET` aquí con el mismo valor.
+6. **Git:** ambos proyectos están conectados a su repo de GitHub; un push a `main` despliega a producción y los PRs generan
+   preview. Producción: https://pact-monad.vercel.app (app) y https://pact-ai-eight.vercel.app (IA).
 
 Qué hace que funcione en Vercel, y por qué:
 
@@ -227,6 +229,7 @@ pnpm build
 pnpm test         # lógica pura de coincidencias (node --test)
 pnpm db:migrate   # aplica db/migrations a Supabase
 pnpm db:webhooks  # conecta Supabase con la app desplegada (ver «Despliegue en Vercel»)
+pnpm db:seed      # datos de ejemplo para la demo (perfiles, solicitudes, calificaciones); `-- --clean` los borra
 ```
 
 Variables en `.env.example`; copiar a `.env.local`. Para probar contra una cadena local: `anvil`, desplegar con
