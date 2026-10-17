@@ -15,9 +15,9 @@ describe("decideRoute", () => {
     }
   });
 
-  it("con sesión, el acceso y el registro llevan al dashboard", () => {
-    assert.equal(decideRoute("/iniciar-sesion", true), "/dashboard");
-    assert.equal(decideRoute("/registro", true), "/dashboard");
+  it("una cookie presente, incluso vencida o revocada, no bloquea el acceso ni el registro", () => {
+    assert.equal(decideRoute("/iniciar-sesion", true), null);
+    assert.equal(decideRoute("/registro", true), null);
   });
 
   it("con sesión, el resto de pantallas siguen disponibles, incluidos los documentos legales", () => {

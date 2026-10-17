@@ -10,6 +10,7 @@ export const isPublicPath = (pathname: string): boolean => PUBLIC_PATHS.includes
 
 export function decideRoute(pathname: string, hasSession: boolean): string | null {
   if (!hasSession && !isPublicPath(pathname)) return LOGIN_PATH;
-  if (hasSession && GUEST_ONLY_PATHS.includes(pathname)) return HOME_AFTER_LOGIN;
+  // The proxy only knows whether a cookie exists, not whether the session is valid.
+  // An expired/revoked cookie must never prevent someone from opening sign-in.
   return null;
 }
