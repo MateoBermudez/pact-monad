@@ -86,6 +86,7 @@ describe("acceso y perfil", () => {
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({
+          avatarUrl: null,
           roles: ["client"],
           skills: [{ slug: "design", level: 4 }],
           keywords: ["Fotografía"],
@@ -132,7 +133,7 @@ describe("roles en el perfil", () => {
     fireEvent.click(save);
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
     const put = fetcher.mock.calls.find(([path, init]) => path === "/api/profile" && init?.method === "PUT");
-    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ roles: ["client"], skills: [], keywords: [] });
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ avatarUrl: null, roles: ["client"], skills: [], keywords: [] });
   });
 
   it("quien ofrece servicios no puede guardar sin ninguna habilidad", async () => {

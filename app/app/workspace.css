@@ -674,3 +674,8 @@
 .location-options { list-style: none; margin: 0; padding: 4px; border: 1px solid #bac79b; border-radius: 12px; background: #fff; max-height: 240px; overflow-y: auto; }
 .location-options [role="option"] { padding: 10px 12px; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
 .location-options [role="option"]:hover, .location-options [aria-selected="true"] { background: #eaffb3; color: #111; }
+
+.avatar-upload { display: grid; justify-items: start; gap: 12px; margin-bottom: 20px; }
+.avatar-upload label { display: grid; gap: 8px; width: 100%; }
+.avatar-upload input { max-width: 100%; }
+.avatar-upload small { font-size: 13px; color: #666; }

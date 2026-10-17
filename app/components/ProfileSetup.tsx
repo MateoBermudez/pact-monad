@@ -15,6 +15,8 @@ import {
 import { api, jsonRequest } from "@/lib/client/api";
 import type { Role } from "@/lib/shared/auth";
 import type { ProfileDto, SkillDto } from "@/lib/shared/profile";
+import { AvatarUpload } from "./AvatarUpload";
+import { ProfileAvatar } from "./ProfileAvatar";
 
 const roles = [
   "Cliente",
@@ -36,6 +38,8 @@ type Availability = { available: boolean; message: string | null };
 export function ProfileSetup() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [fixedName, setFixedName] = useState(false);
   const [catalog, setCatalog] = useState<SkillDto[]>([]);
   const [levels, setLevels] = useState<Record<string, number>>({});
@@ -64,6 +68,7 @@ export function ProfileSetup() {
       .then(({ profile }) => {
         if (!active) return;
         setAuthenticated(true);
+        setAvatar(profile.avatarUrl ?? "");
         setLevels(
           Object.fromEntries(
             profile.skills.map((skill) => [skill.slug, skill.level]),
@@ -132,6 +137,7 @@ export function ProfileSetup() {
     if (
       loading ||
       saving ||
+      uploadingAvatar ||
       !authenticated ||
       !(fixedName || available) ||
       (offersServices(role) && selected.length === 0)
@@ -153,6 +159,7 @@ export function ProfileSetup() {
       await api(
         "/api/profile",
         jsonRequest("PUT", {
+          avatarUrl: avatar || null,
           roles: ROLES_BY_LABEL[role as (typeof roles)[number]],
           skills: known,
           keywords: selected.filter(
@@ -160,6 +167,7 @@ export function ProfileSetup() {
           ),
         }),
       );
+      window.dispatchEvent(new Event("pact-profile-updated"));
       router.push("/dashboard");
     } catch (e) {
       setError(
@@ -192,6 +200,7 @@ export function ProfileSetup() {
             void save();
           }}
         >
+          <AvatarUpload value={avatar} onChange={setAvatar} onBusyChange={setUploadingAvatar} disabled={loading || saving || !authenticated} />
           <label htmlFor="username">Nombre de usuario</label>
           <div className="profile-input">
             <span>@</span>
@@ -337,6 +346,7 @@ export function ProfileSetup() {
             disabled={
               loading ||
               saving ||
+              uploadingAvatar ||
               !authenticated ||
               !(fixedName || available) ||
               (offersServices(role) && selected.length === 0)
@@ -350,9 +360,7 @@ export function ProfileSetup() {
           <h2>Así te verán</h2>
           <div className="preview-person">
             <div className="preview-identity">
-              <span className="profile-avatar">
-                <User size={42} fill="currentColor" />
-              </span>
+              <ProfileAvatar src={avatar} className="h-16 w-16" />
               <div>
                 <strong>@{name || "tu_nombre"}</strong>
                 <p className="role-badge">{role}</p>

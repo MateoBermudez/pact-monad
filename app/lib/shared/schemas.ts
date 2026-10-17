@@ -76,7 +76,7 @@ export const listNotificationsQuerySchema = z.object({
 
 export const updateProfileSchema = z.object({
   roles: rolesSchema.optional(),
-  avatarUrl: httpsUrlSchema.nullable().optional(),
+  avatarUrl: z.union([httpsUrlSchema, z.string().regex(/^\/api\/avatars\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)]).nullable().optional(),
   location: optionalText(80),
   availability: z.enum(AVAILABILITIES).optional(),
   links: z.array(profileLinkSchema).max(MAX_LINKS, `Puedes agregar hasta ${MAX_LINKS} enlaces`).optional(),

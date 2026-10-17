@@ -21,6 +21,7 @@ import { short, usePact } from "@/lib/client/pact-context";
 import { useHydrated } from "@/lib/client/use-hydrated";
 import { CountUp } from "@/components/Effects";
 import { NotificationBell } from "@/components/NotificationBell";
+import { CurrentUserAvatar } from "@/components/ProfileAvatar";
 
 export type HeaderVariant = "full" | "minimal" | "guest";
 
@@ -125,7 +126,7 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
             </span>
             {connected ? (
               <div className="flex items-center gap-1 rounded-full bg-ink py-1 pl-1 pr-1 text-ink-foreground">
-                <span className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-ink ring-2 ring-primary/40" />
+                <Link href="/cuenta" aria-label="Mi foto de perfil"><CurrentUserAvatar className="h-8 w-8" /></Link>
                 <span className="hidden px-1.5 font-mono text-xs sm:inline">
                   {short(address)}
                 </span>
