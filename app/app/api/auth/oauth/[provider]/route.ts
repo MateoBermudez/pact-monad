@@ -2,7 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
-import { MODE_COOKIE, RETURN_COOKIE, resolveReturnUrl, withError } from "@/lib/server/return-url";
+import { loginUrl, MODE_COOKIE, RETURN_COOKIE, resolveReturnUrl, withError } from "@/lib/server/return-url";
 import { createSupabaseAuthClient } from "@/lib/server/supabase";
 import { oauthProviderSchema } from "@/lib/shared/schemas";
 
@@ -11,7 +11,6 @@ const FLOW_COOKIE_TTL_SECONDS = 10 * 60;
 export async function GET(request: Request, context: RouteContext<"/api/auth/oauth/[provider]">) {
   const url = new URL(request.url);
   const target = resolveReturnUrl(url.searchParams.get("next"));
-  const failure = (code: string) => NextResponse.redirect(withError(target, code));
 
   try {
     const provider = oauthProviderSchema.safeParse((await context.params).provider);
@@ -19,6 +18,7 @@ export async function GET(request: Request, context: RouteContext<"/api/auth/oau
 
     const link = url.searchParams.get("link") === "1";
     const session = await getSessionUser();
+    const failure = (code: string) => NextResponse.redirect(withError(session ? target : loginUrl(), code));
     if (session && !link) return failure("already_signed_in");
     if (!session && link) return failure("login_required");
 
@@ -43,6 +43,6 @@ export async function GET(request: Request, context: RouteContext<"/api/auth/oau
   } catch (error) {
     unstable_rethrow(error);
     console.error("[auth/oauth]", error);
-    return failure("oauth_unavailable");
+    return NextResponse.redirect(withError(loginUrl(), "oauth_unavailable"));
   }
 }
