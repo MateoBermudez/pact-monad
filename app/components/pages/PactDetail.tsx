@@ -24,6 +24,12 @@ import { AgreementChat } from "@/components/AgreementChat";
 import { FileUpload, FileLink } from "@/components/FileUpload";
 import type { FileDto } from "@/lib/shared/files";
 import { fileReference, referencedFileId } from "@/lib/shared/file-reference";
+import {
+  deliveryNoteError,
+  deliveryUrlError,
+  MAX_DELIVERY_NOTE_BYTES,
+  utf8Length,
+} from "@/lib/shared/delivery";
 
 export default function PactDetail({ id }: { id: string }) {
   const { refresh } = usePact();
@@ -33,6 +39,8 @@ export default function PactDetail({ id }: { id: string }) {
   const [uploading, setUploading] = useState(false);
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [note, setNote] = useState("");
+  const noteError = deliveryNoteError(note);
+  const urlError = deliveryUrlError(evidenceUrl);
   const [evidenceFile, setEvidenceFile] = useState<FileDto | null>(null);
   const [score, setScore] = useState("5");
   const [comment, setComment] = useState("");
@@ -82,6 +90,10 @@ export default function PactDetail({ id }: { id: string }) {
       | "cancelAndRefund",
   ) {
     if (!agreement || busy || uploading) return;
+    if (method === "registerDelivery" && (noteError || (!evidenceFile && urlError))) {
+      setError(noteError ?? urlError);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -303,7 +315,6 @@ export default function PactDetail({ id }: { id: string }) {
             <input
               required={!evidenceFile}
               type="url"
-              maxLength={512}
               value={evidenceUrl}
               onChange={(e) => setEvidenceUrl(e.target.value)}
               className="w-full rounded-xl border p-3"
@@ -320,13 +331,25 @@ export default function PactDetail({ id }: { id: string }) {
             Nota de entrega
             <textarea
               required
-              maxLength={2000}
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              aria-invalid={!!noteError}
+              aria-describedby="delivery-note-help"
               className="w-full rounded-xl border p-3"
             />
+            <span
+              id="delivery-note-help"
+              role={noteError ? "alert" : undefined}
+              className={`block text-xs ${noteError ? "text-destructive" : "text-muted-foreground"}`}
+            >
+              {noteError ??
+                `${utf8Length(note)} de ${MAX_DELIVERY_NOTE_BYTES} bytes. Es un resumen que queda en el contrato; los detalles van en el enlace o el archivo.`}
+            </span>
           </label>
-          <button disabled={busy || uploading} className="btn-primary">
+          <button
+            disabled={busy || uploading || !!noteError || (!evidenceFile && !!urlError)}
+            className="btn-primary"
+          >
             Firmar entrega
           </button>
         </form>
