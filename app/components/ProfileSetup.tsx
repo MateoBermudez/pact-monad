@@ -41,6 +41,7 @@ export function ProfileSetup() {
   const [avatar, setAvatar] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [fixedName, setFixedName] = useState(false);
+  const [newProfile, setNewProfile] = useState(false);
   const [catalog, setCatalog] = useState<SkillDto[]>([]);
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<string[]>([]);
@@ -68,6 +69,7 @@ export function ProfileSetup() {
       .then(({ profile }) => {
         if (!active) return;
         setAuthenticated(true);
+        setNewProfile(!profile.username);
         setAvatar(profile.avatarUrl ?? "");
         setLevels(
           Object.fromEntries(
@@ -168,7 +170,7 @@ export function ProfileSetup() {
         }),
       );
       window.dispatchEvent(new Event("pact-profile-updated"));
-      router.push("/dashboard");
+      router.push(newProfile ? "/bienvenida" : "/dashboard");
     } catch (e) {
       setError(
         e instanceof Error

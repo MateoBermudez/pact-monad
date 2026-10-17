@@ -114,6 +114,9 @@ export default function Account() {
             </section>
             <section className="workspace-card">
               <h2>Más de tu perfil</h2>
+              <Link className="workspace-link" href="/bienvenida">
+                Volver a ver la bienvenida a PACT ↗
+              </Link>
               <Link className="workspace-link" href="/perfil">
                 Nombre de usuario y habilidades ↗
               </Link>

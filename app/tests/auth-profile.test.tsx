@@ -27,6 +27,24 @@ const reply = (body: unknown, status = 200) =>
     }),
   );
 describe("acceso y perfil", () => {
+  it("abre la bienvenida al completar un perfil nuevo", async () => {
+    const fetcher = vi.fn((path: string, init?: RequestInit) => {
+      if (path === "/api/skills") return reply({ skills: [] });
+      if (path === "/api/profile" && !init?.method) return reply({ profile: { username: null, avatarUrl: null, roles: ["client"], skills: [], keywords: [] } });
+      if (path.startsWith("/api/username?")) return reply({ available: true, message: null });
+      return reply({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<ProfileSetup />);
+    const input = screen.getByLabelText("Nombre de usuario");
+    await waitFor(() => expect(input).toBeEnabled());
+    fireEvent.change(input, { target: { value: "nuevacuenta" } });
+    const save = screen.getByRole("button", { name: "Guardar y entrar a PACT" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/bienvenida"));
+    expect(fetcher.mock.calls.some(([path, init]) => path === "/api/profile" && init?.method === "PUT")).toBe(true);
+  });
   it("no simula un acceso cuando el backend social no está disponible", async () => {
     vi.stubGlobal(
       "fetch",
