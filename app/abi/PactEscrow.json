@@ -95,6 +95,92 @@
   },
   {
     "type": "function",
+    "name": "amendAgreement",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expiry",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "amendmentDigest",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expiry",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "amendmentNonce",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "approveAndRelease",
     "inputs": [
       {
@@ -351,6 +437,55 @@
   },
   {
     "type": "event",
+    "name": "AgreementAmended",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "oldAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newDeadline",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "refunded",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "AgreementApproved",
     "inputs": [
       {
@@ -527,6 +662,11 @@
   },
   {
     "type": "error",
+    "name": "AmendmentExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "DeadlineNotInFuture",
     "inputs": []
   },
@@ -557,12 +697,22 @@
   },
   {
     "type": "error",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidMaxAutoRelease",
     "inputs": []
   },
   {
     "type": "error",
     "name": "InvalidProvider",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignature",
     "inputs": []
   },
   {
@@ -609,12 +759,22 @@
   },
   {
     "type": "error",
+    "name": "NotParty",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotProvider",
     "inputs": []
   },
   {
     "type": "error",
     "name": "NoteTooLong",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyClientCanIncrease",
     "inputs": []
   },
   {
@@ -636,5 +796,21 @@
     "type": "error",
     "name": "UrlTooLong",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WrongValue",
+    "inputs": [
+      {
+        "name": "expected",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sent",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ]
