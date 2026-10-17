@@ -1,6 +1,7 @@
-import { optional, parseId } from "@/lib/server/http";
+import { optional } from "@/lib/server/http";
 import { loadPublicProfile } from "@/lib/server/services/profiles";
+import { resolveUserRef } from "@/lib/server/services/username";
 
 export const GET = optional<{ id: string }>(async ({ params }) => ({
-  profile: await loadPublicProfile(parseId(params.id)),
+  profile: await loadPublicProfile(await resolveUserRef(params.id)),
 }));

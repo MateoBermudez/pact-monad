@@ -1,12 +1,26 @@
 import { z } from "zod";
 import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
+import { normalizeUsername, usernameError } from "@/lib/shared/username";
 
 export const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Hash de transacción inválido");
 
 export const uuidSchema = z.string().uuid();
 
 export const oauthProviderSchema = z.enum(OAUTH_PROVIDERS);
+
+export const usernameSchema = z
+  .string()
+  .max(40)
+  .transform(normalizeUsername)
+  .superRefine((value, ctx) => {
+    const message = usernameError(value);
+    if (message) ctx.addIssue({ code: "custom", message });
+  });
+
+export const setUsernameSchema = z.object({ username: usernameSchema });
+
+export const usernameQuerySchema = z.object({ u: usernameSchema });
 
 export const linkWalletSchema = z.object({
   address: z.string().min(1).max(64),
