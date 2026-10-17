@@ -235,6 +235,18 @@ export function PublicProfile({ id }: { id: string }) {
                     {skill.name} · nivel {skill.level}/5
                   </span>
                 ))}
+                {profile.keywords
+                  .filter(
+                    (keyword) =>
+                      !profile.skills.some(
+                        (skill) =>
+                          skill.name.trim().toLocaleLowerCase("es") ===
+                          keyword.trim().toLocaleLowerCase("es"),
+                      ),
+                  )
+                  .map((keyword) => (
+                    <span key={`custom:${keyword}`}>{keyword}</span>
+                  ))}
               </div>
             </div>
             <div>

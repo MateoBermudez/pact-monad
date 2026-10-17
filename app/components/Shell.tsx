@@ -66,7 +66,7 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
         )}
       </AnimatePresence>
       <header>
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 pb-2 pt-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-4">
           <Link
             href="/"
             className="press flex shrink-0 items-center gap-1.5"
@@ -91,7 +91,7 @@ export function Header({ variant = "full" }: { variant?: HeaderVariant }) {
             />
           </Link>
           {variant === "full" && (
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <NotificationBell />
             <Link
               href="/cuenta"

@@ -1,6 +1,125 @@
 .workspace {
   --workspace-lime: #d1ff50;
 }
+.account-skills {
+  min-width: 0;
+  margin: 8px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.account-skills legend {
+  padding-right: 10px;
+  font-size: 17px;
+  font-weight: 650;
+}
+.account-skills-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+.account-skill {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid #c8d9a7;
+  border-radius: 10px;
+  background: #f3fbdc;
+}
+.account-skill strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.workspace-form .account-skill select {
+  width: auto;
+  max-width: 145px;
+  padding: 6px;
+  font-size: 12px;
+}
+.account-skill button {
+  padding: 7px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.account-skill button:hover {
+  background: #d9efa6;
+}
+.account-skill-custom {
+  background: #f5f5f8;
+  border-color: var(--border);
+}
+.account-skill-custom > span {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.account-skills-search-label {
+  margin-bottom: 6px;
+}
+.account-skills-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.account-skills-search > svg {
+  flex-shrink: 0;
+}
+.account-skills-search input {
+  min-width: 0;
+  flex: 1;
+}
+.account-skills-search .btn-secondary {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  min-height: 40px;
+  font-size: 12px;
+}
+.account-skill-suggestions {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.account-skill-suggestions button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.account-skill-suggestions button:hover {
+  background: #edffc9;
+}
+.account-skills:disabled {
+  opacity: 0.6;
+}
+@media (max-width: 480px) {
+  .account-skill {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .account-skill > strong {
+    grid-column: 1;
+  }
+  .account-skill > select,
+  .account-skill-custom > span {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  .account-skill > button {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+  .account-skills-search {
+    flex-wrap: wrap;
+  }
+  .account-skills-search > svg {
+    display: none;
+  }
+}
 .workspace-nav {
   display: flex;
   flex-wrap: wrap;

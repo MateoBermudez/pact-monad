@@ -13,6 +13,7 @@ import { oauthStartUrl, signOut } from "@/lib/client/auth";
 import type { IdentityDto } from "@/lib/shared/auth";
 import type { ProfileDto, Availability } from "@/lib/shared/profile";
 import { usePact } from "@/lib/client/pact-context";
+import { ProfileSkills } from "@/components/ProfileSkills";
 export default function Account() {
   const params = useSearchParams();
   const state = useResource<{ profile: ProfileDto }>("/api/profile");
@@ -38,6 +39,7 @@ export default function Account() {
       {state.data && (
         <div className="workspace-split">
           <ProfileFields
+            key={state.data.profile.id}
             profile={state.data.profile}
             onSaved={() => void state.reload()}
           />
@@ -174,6 +176,8 @@ function ProfileFields({
   );
   const [avatar, setAvatar] = useState(profile.avatarUrl ?? "");
   const [links, setLinks] = useState(profile.links);
+  const [skills, setSkills] = useState(profile.skills);
+  const [keywords, setKeywords] = useState(profile.keywords);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
@@ -196,6 +200,8 @@ function ProfileFields({
               availability,
               avatarUrl: avatar || null,
               links,
+              skills: skills.map(({ slug, level }) => ({ slug, level })),
+              keywords,
             }),
           );
           setFeedback("Perfil actualizado.");
@@ -224,6 +230,13 @@ function ProfileFields({
           maxLength={120}
         />
       </label>
+      <ProfileSkills
+        skills={skills}
+        keywords={keywords}
+        onSkillsChange={setSkills}
+        onKeywordsChange={setKeywords}
+        disabled={busy}
+      />
       <label>
         Sobre ti
         <textarea
