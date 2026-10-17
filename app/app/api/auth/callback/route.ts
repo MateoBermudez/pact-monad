@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionUser, startSession } from "@/lib/server/auth";
 import { ApiError } from "@/lib/server/http";
-import { RETURN_COOKIE, resolveReturnUrl, withError } from "@/lib/server/return-url";
+import { MODE_COOKIE, RETURN_COOKIE, resolveReturnUrl, withError } from "@/lib/server/return-url";
 import { attachSocial, signInSocial } from "@/lib/server/services/identities";
 import { toSocialProfile } from "@/lib/server/social-profile";
 import { createSupabaseAuthClient } from "@/lib/server/supabase";
@@ -12,7 +12,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const store = await cookies();
   const target = resolveReturnUrl(store.get(RETURN_COOKIE)?.value);
+  const linking = store.get(MODE_COOKIE)?.value === "link";
   store.delete({ name: RETURN_COOKIE, path: "/api/auth" });
+  store.delete({ name: MODE_COOKIE, path: "/api/auth" });
 
   const failure = (code: string) => NextResponse.redirect(withError(target, code));
 
@@ -24,17 +26,22 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error || !data.user) return failure("oauth_failed");
 
-    const profile = toSocialProfile(data.user);
-    const current = await getSessionUser();
-    if (current) {
-      await attachSocial(current.id, profile);
-    } else {
-      const user = await signInSocial(profile);
-      await startSession(user.id);
-    }
+    try {
+      const profile = toSocialProfile(data.user);
+      const current = await getSessionUser();
 
-    await supabase.auth.signOut({ scope: "local" });
-    return NextResponse.redirect(target);
+      if (linking) {
+        if (!current) return failure("login_required");
+        await attachSocial(current.id, profile);
+      } else {
+        if (current) return failure("already_signed_in");
+        const user = await signInSocial(profile);
+        await startSession(user.id);
+      }
+      return NextResponse.redirect(target);
+    } finally {
+      await supabase.auth.signOut({ scope: "local" });
+    }
   } catch (error) {
     unstable_rethrow(error);
     if (error instanceof ApiError) return failure(error.code);

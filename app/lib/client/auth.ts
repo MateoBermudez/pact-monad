@@ -1,7 +1,7 @@
 import "client-only";
 import type { Eip1193Provider } from "ethers";
 import { connectWallet } from "@/lib/client/wallet";
-import type { OAuthProvider, SessionUser } from "@/lib/shared/auth";
+import type { IdentityDto, OAuthProvider, SessionUser } from "@/lib/shared/auth";
 
 type InjectedProvider = Eip1193Provider & {
   on?(event: string, handler: (...args: unknown[]) => void): void;
@@ -45,9 +45,18 @@ export async function signInWithWallet(): Promise<SessionUser> {
   }
 }
 
-export function oauthStartUrl(provider: OAuthProvider, next?: string): string {
-  const query = next ? `?next=${encodeURIComponent(next)}` : "";
-  return `/api/auth/oauth/${provider}${query}`;
+export function oauthStartUrl(provider: OAuthProvider, options: { next?: string; link?: boolean } = {}): string {
+  const params = new URLSearchParams();
+  if (options.next) params.set("next", options.next);
+  if (options.link) params.set("link", "1");
+  const query = params.toString();
+  return `/api/auth/oauth/${provider}${query ? `?${query}` : ""}`;
+}
+
+export async function fetchIdentities(): Promise<IdentityDto[]> {
+  const res = await fetch("/api/auth/identities");
+  if (!res.ok) throw new Error(`/api/auth/identities respondió ${res.status}`);
+  return ((await res.json()) as { identities: IdentityDto[] }).identities;
 }
 
 export async function linkWalletToAccount(): Promise<{ user: SessionUser; merged: boolean }> {

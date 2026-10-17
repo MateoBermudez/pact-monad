@@ -2,6 +2,7 @@ import "server-only";
 import { serverEnv } from "@/lib/server/env";
 
 export const RETURN_COOKIE = "pact_oauth_next";
+export const MODE_COOKIE = "pact_oauth_mode";
 
 const DEFAULT_PATH = "/";
 
