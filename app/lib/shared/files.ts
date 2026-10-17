@@ -7,8 +7,9 @@ const MB = 1024 * 1024;
 
 export const FILE_RULES: Record<FilePurpose, { maxBytes: number; mimeTypes: readonly string[] }> = {
   brief: {
-    // pact-ai acepta hasta 7 MB por archivo: un brief más grande no se podría analizar.
-    maxBytes: 7 * MB,
+    // El brief viaja en base64 (+33%) a pact-ai, que corre en Vercel con un tope de 4,5 MB por petición:
+    // más de 3 MB no se podría analizar.
+    maxBytes: 3 * MB,
     mimeTypes: ["application/pdf", DOCX_MIME, "text/plain", "text/markdown", "image/png", "image/jpeg", "image/webp"],
   },
   portfolio: {
