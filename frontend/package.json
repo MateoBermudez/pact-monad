@@ -1,20 +1,21 @@
 {
   "name": "tanstack_start_ts",
   "private": true,
+  "packageManager": "pnpm@12.8.1",
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "pnpm --dir ../app dev",
+    "build": "pnpm --dir ../app build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "lint": "eslint .",
+    "lint": "pnpm --dir ../app lint",
     "format": "prettier --write .",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "overrides": {
-    "rolldown": "1.2.1"
+    "test": "pnpm --dir ../app test",
+    "test:watch": "vitest",
+    "start": "pnpm --dir ../app start",
+    "dev:legacy": "vite dev",
+    "test:legacy": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

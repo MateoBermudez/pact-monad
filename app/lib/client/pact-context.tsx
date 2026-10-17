@@ -1,0 +1,242 @@
+"use client";
+import "client-only";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { api, ApiRequestError } from "./api";
+import {
+  ensureSession,
+  fetchSession,
+  signOut,
+  watchWalletAccount,
+} from "./auth";
+import {
+  connectMetaMask,
+  getChainId,
+  getWalletBalanceMon,
+  MONAD_CHAIN_ID,
+  switchToMonadTestnet,
+} from "./escrow-wallet";
+import { toPact, type Pact } from "@/lib/shared/ui-pact";
+import type { AgreementDto, DashboardDto } from "@/lib/shared/agreements";
+import type { SessionUser } from "@/lib/shared/auth";
+export {
+  short,
+  addDays,
+  STATUS_BADGE,
+  aiCanRelease,
+} from "@/lib/shared/ui-pact";
+export type { Role, Status, Pact } from "@/lib/shared/ui-pact";
+type State = {
+  address: string;
+  connected: boolean;
+  signedIn: boolean;
+  loading: boolean;
+  error: string | null;
+  balance: number;
+  wrongNetwork: boolean;
+  pacts: Pact[];
+  aiAutoApprove: boolean;
+  aiLimit: number;
+  setConnected: (value: boolean) => void;
+  connectWallet: () => Promise<string>;
+  switchNetwork: () => Promise<void>;
+  signIn: () => Promise<void>;
+  refresh: () => Promise<Pact[]>;
+};
+const Context = createContext<State | null>(null);
+export function PactProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [address, setAddress] = useState("");
+  const [connected, setIsConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [wrongNetwork, setWrongNetwork] = useState(false);
+  const [pacts, setPacts] = useState<Pact[]>([]);
+  const [aiAutoApprove, setAiAutoApprove] = useState(false);
+  const [aiLimit, setAiLimit] = useState(0);
+  const refresh = useCallback(async () => {
+    try {
+      const [{ agreements }, { dashboard }] = await Promise.all([
+        api<{ agreements: AgreementDto[] }>("/api/agreements"),
+        api<{ dashboard: DashboardDto }>("/api/dashboard"),
+      ]);
+      const items = agreements.map(toPact);
+      setPacts(items);
+      setError(null);
+      if (dashboard.availableMon !== null)
+        setBalance(Number(dashboard.availableMon));
+      setAiAutoApprove(dashboard.autoRelease.enabled);
+      setAiLimit(Number(dashboard.autoRelease.limitMon));
+      return items;
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        setUser(null);
+        setPacts([]);
+      }
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar tus acuerdos.",
+      );
+      return [];
+    }
+  }, []);
+  const connectWallet = useCallback(async () => {
+    const wallet = await connectMetaMask();
+    setAddress(wallet.address);
+    setIsConnected(true);
+    setBalance(wallet.balance);
+    setWrongNetwork(wallet.chainId !== MONAD_CHAIN_ID);
+    return wallet.address;
+  }, []);
+  const switchNetwork = useCallback(async () => {
+    await switchToMonadTestnet();
+    setWrongNetwork(false);
+    if (address) setBalance(await getWalletBalanceMon(address));
+  }, [address]);
+  const signIn = useCallback(async () => {
+    const session = await ensureSession();
+    setUser(session);
+    await connectWallet();
+    await refresh();
+  }, [connectWallet, refresh]);
+  const setConnected = useCallback(
+    (value: boolean) => {
+      if (value) {
+        void connectWallet().catch((e: unknown) =>
+          setError(e instanceof Error ? e.message : "No se pudo conectar."),
+        );
+        return;
+      }
+      void signOut()
+        .then(() => {
+          setUser(null);
+          setIsConnected(false);
+          setAddress("");
+          setBalance(0);
+          setPacts([]);
+        })
+        .catch((e: unknown) =>
+          setError(
+            e instanceof Error ? e.message : "No se pudo cerrar la sesión.",
+          ),
+        );
+    },
+    [connectWallet],
+  );
+  useEffect(() => {
+    let active = true;
+    void fetchSession()
+      .then(async (session) => {
+        if (!active) return;
+        setUser(session);
+        if (session) {
+          setAddress(session.wallet ?? "");
+          await refresh();
+        }
+      })
+      .catch((e: unknown) => {
+        if (active)
+          setError(
+            e instanceof Error ? e.message : "No se pudo cargar la sesión.",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    type WalletEvents = NonNullable<Window["ethereum"]> & {
+      on?: (event: string, callback: (chain: unknown) => void) => void;
+      removeListener?: (
+        event: string,
+        callback: (chain: unknown) => void,
+      ) => void;
+    };
+    const eth = (
+      typeof window === "undefined" ? undefined : window.ethereum
+    ) as WalletEvents | undefined;
+    void eth
+      ?.request({ method: "eth_accounts" })
+      .then(async (accounts) => {
+        if (
+          !active ||
+          !Array.isArray(accounts) ||
+          typeof accounts[0] !== "string"
+        )
+          return;
+        setAddress(accounts[0]);
+        setIsConnected(true);
+        setWrongNetwork((await getChainId()) !== MONAD_CHAIN_ID);
+        setBalance(await getWalletBalanceMon(accounts[0]));
+      })
+      .catch(() => undefined);
+    const stop = watchWalletAccount((account) => {
+      if (!active) return;
+      setAddress(account ?? "");
+      setIsConnected(!!account);
+      setUser(null);
+      setPacts([]);
+    });
+    const chainChanged = (chain: unknown) => {
+      if (active && typeof chain === "string")
+        setWrongNetwork(Number(chain) !== MONAD_CHAIN_ID);
+    };
+    eth?.on?.("chainChanged", chainChanged);
+    return () => {
+      active = false;
+      stop();
+      eth?.removeListener?.("chainChanged", chainChanged);
+    };
+  }, [refresh]);
+  useEffect(() => {
+    if (!user) return;
+    const stream = new EventSource("/api/stream");
+    const update = () => {
+      void refresh();
+    };
+    stream.addEventListener("change", update);
+    window.addEventListener("focus", update);
+    return () => {
+      stream.close();
+      window.removeEventListener("focus", update);
+    };
+  }, [user, refresh]);
+  return (
+    <Context.Provider
+      value={{
+        address,
+        connected,
+        signedIn:
+          !!user &&
+          (user.wallet === null ||
+            !address ||
+            user.wallet.toLowerCase() === address.toLowerCase()),
+        loading,
+        error,
+        balance,
+        wrongNetwork,
+        pacts,
+        aiAutoApprove,
+        aiLimit,
+        setConnected,
+        connectWallet,
+        switchNetwork,
+        signIn,
+        refresh,
+      }}
+    >
+      {children}
+    </Context.Provider>
+  );
+}
+export function usePact() {
+  const state = useContext(Context);
+  if (!state) throw new Error("PactProvider missing");
+  return state;
+}

@@ -12,8 +12,8 @@ Evento: sábado 17 de octubre de 2026 · Indie Universe, Medellín.
 ```
 pact-monad/
 ├── contracts/   Solidity + Foundry. PactEscrow.sol, 53 pruebas y script de despliegue
-├── app/         Next.js 16 (TypeScript estricto). Backend: lado servidor (app/api/*, lib/server/) + base en Supabase
-└── frontend/    Maqueta visual (TanStack Start). Se migrará a app/ para tener front y back en un solo proyecto
+├── app/         Next.js 16 (TypeScript estricto). Interfaz PACT + API en el mismo proyecto, con base en Supabase
+└── frontend/    Referencia visual histórica de TanStack. Los comandos principales delegan ahora a app/
 ```
 
 **El backend vive aquí, en el lado servidor de Next.js.** La conexión con la IA está en un repo aparte, **`pact-ai`**
@@ -66,11 +66,23 @@ A. Contrato y pruebas en local → B. Despliegue en Monad Testnet → C. Flujo m
 
 Estado: **A y D hechos y probados** (contrato con 53 pruebas; backend con indexador, solicitudes, reglas, postulaciones,
 revisión de la IA, pago autónomo, calificaciones, créditos, panel y tiempo real). **Pendiente:** B (desplegar el contrato
-en Monad Testnet: la wallet que despliega necesita MON de faucet), conectar el frontend a la API (C) y la `GEMINI_API_KEY`
-para la IA real. La maqueta visual vive en `frontend/`; el repo `pact-escrow` conserva su historia original.
+en Monad Testnet: la wallet que despliega necesita MON de faucet), configurar y verificar los servicios reales en el entorno de despliegue (C) y la `GEMINI_API_KEY`
+para la IA real. La interfaz migrada vive en `app/components/`; `frontend/` conserva la referencia visual anterior.
 
-## Maqueta visual actual
+## Interfaz Next.js
 
-La carpeta  `frontend/` contiene el estado actual de la interfaz de PACT, importado como archivos sin el historial de pact-escrow. Incluye ilustraciones animadas, tipografía Intropol, logos y favicon de PACT, y los ajustes de las cards y del encabezado. Mantiene su estado de demostración en React; todavía no está conectada al backend de app/.
+La interfaz y el backend se ejecutan juntos desde `app/`: inicio, conexión de wallet, creación con IA, revisión, confirmación, dashboard, detalle del acuerdo y configuración. Las llamadas a `/api/*` usan el mismo origen y la misma sesión; no requieren `BACKEND_URL` ni `VITE_API_URL`.
 
-Para ejecutarla: entrar en frontend/, ejecutar npm ci y luego npm run dev. Para compilar: npm run build. Los contratos y el backend existentes se conservan en contracts/ y app/.
+```sh
+cd app
+pnpm install --frozen-lockfile
+# Completar app/.env.local siguiendo app/.env.example
+pnpm db:migrate
+pnpm dev
+```
+
+La migración `008_direct_agreements.sql` registra las condiciones confirmadas para acuerdos con proveedor indicado por el cliente. El backend prepara el hash canónico y el indexador vincula el evento real del contrato con esas reglas. El proveedor acepta desde su propia wallet. El flujo de postulaciones existente se conserva.
+
+La autenticación actual usa la firma de wallet del backend. Google y GitHub siguen pendientes en la integración de login social; no se muestran como accesos funcionales hasta que existan sus endpoints.
+
+`frontend/` conserva el código anterior como referencia; `pnpm dev`, `build`, `start`, `lint` y `test` desde esa carpeta delegan a Next.js en `app/`. El prototipo anterior se puede abrir explícitamente con `pnpm dev:legacy`.

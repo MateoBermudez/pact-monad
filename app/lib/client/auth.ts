@@ -26,9 +26,14 @@ function isRejection(error: unknown): boolean {
 export async function signInWithWallet(): Promise<SessionUser> {
   try {
     const { signer, address } = await connectWallet();
-    const { message } = await postJson<{ message: string }>("/api/auth/nonce", { address });
+    const { message } = await postJson<{ message: string }>("/api/auth/nonce", {
+      address,
+    });
     const signature = await signer.signMessage(message);
-    const { user } = await postJson<{ user: SessionUser }>("/api/auth/verify", { address, signature });
+    const { user } = await postJson<{ user: SessionUser }>("/api/auth/verify", {
+      address,
+      signature,
+    });
     return user;
   } catch (error) {
     if (isRejection(error)) throw new SignInCancelledError();
@@ -66,25 +71,39 @@ export async function fetchSession(): Promise<SessionUser | null> {
 
 // Cuenta autorizada en MetaMask, sin abrir ninguna ventana.
 async function authorizedAccount(): Promise<string | null> {
-  const accounts = await (window.ethereum as InjectedProvider | undefined)?.request({ method: "eth_accounts" });
-  return Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0].toLowerCase() : null;
+  const accounts = await (
+    window.ethereum as InjectedProvider | undefined
+  )?.request({ method: "eth_accounts" });
+  return Array.isArray(accounts) && typeof accounts[0] === "string"
+    ? accounts[0].toLowerCase()
+    : null;
 }
 
 // Se llama justo antes de una acción que necesita identidad (postularse, crear, comprar créditos). Si ya hay una sesión
 // de esta cuenta no pide nada; solo se firma cuando falta sesión o cuando la persona cambió de cuenta en MetaMask.
 export async function ensureSession(): Promise<SessionUser> {
-  const [session, account] = await Promise.all([fetchSession(), authorizedAccount().catch(() => null)]);
-  if (session && (account === null || account === session.wallet)) return session;
+  const [session, account] = await Promise.all([
+    fetchSession(),
+    authorizedAccount().catch(() => null),
+  ]);
+  if (session && (session.wallet === null || account === null || account === session.wallet))
+    return session;
   return signInWithWallet();
 }
 
 // Avisa cuando la persona cambia de cuenta en MetaMask. Devuelve la función para dejar de escuchar.
-export function watchWalletAccount(onChange: (account: string | null) => void): () => void {
+export function watchWalletAccount(
+  onChange: (account: string | null) => void,
+): () => void {
   const ethereum = window.ethereum as InjectedProvider | undefined;
   if (!ethereum?.on) return () => undefined;
 
   const handler = (accounts: unknown) =>
-    onChange(Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0].toLowerCase() : null);
+    onChange(
+      Array.isArray(accounts) && typeof accounts[0] === "string"
+        ? accounts[0].toLowerCase()
+        : null,
+    );
   ethereum.on("accountsChanged", handler);
   return () => ethereum.removeListener?.("accountsChanged", handler);
 }

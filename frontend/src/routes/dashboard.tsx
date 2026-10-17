@@ -30,7 +30,7 @@ const needsAction = (p: Pact) =>
   (p.role === "cliente" && p.status === "Entregado") || (p.role === "proveedor" && (p.status === "Creado" || p.status === "Aceptado"));
 
 function Dashboard() {
-  const { pacts, balance, receive } = useDemo();
+  const { address, pacts, balance, receive } = useDemo();
   const [filter, setFilter] = useState<Filter>("Todos");
   const [roleF, setRoleF] = useState<"todos" | "cliente" | "proveedor">("todos");
 
@@ -83,7 +83,7 @@ function Dashboard() {
           <span className="rounded-full bg-primary p-3 text-ink"><Wifi className="h-5 w-5 rotate-90" /></span>
         </div>
         <div className="mt-6 flex items-end justify-between text-xs text-ink-foreground/60">
-          <span className="font-mono">{short(CLIENT)}</span>
+          <span className="font-mono">{short(address)}</span>
           <span className="flex items-center gap-1.5 text-primary"><Lock className="h-3.5 w-3.5" /> {locked} MON en escrow</span>
         </div>
       </motion.div>

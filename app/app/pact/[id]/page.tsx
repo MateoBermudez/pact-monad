@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import PactDetailView from "@/components/pages/PactDetail";
+import { ConnectGate } from "@/components/Shell";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -12,5 +14,5 @@ export default function PactPage({ params }: PageProps) {
 
 async function PactDetail({ params }: PageProps) {
   const { id } = await params;
-  return <main className="p-6">PACT #{id}</main>;
+  return <ConnectGate><PactDetailView id={id} /></ConnectGate>;
 }

@@ -9,16 +9,33 @@ export class ApiRequestError extends Error {
     super(message);
   }
 }
-
-export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    credentials: "same-origin",
+    cache: "no-store",
   });
-  if (!res.ok) {
-    const detail = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
-    throw new ApiRequestError(res.status, detail?.error ?? "error", detail?.message ?? `${path} respondió ${res.status}`);
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = data as { error?: string; message?: string } | null;
+    throw new ApiRequestError(
+      response.status,
+      error?.error ?? "unavailable",
+      error?.message ??
+        (response.status === 401
+          ? "Inicia sesión para continuar."
+          : "No se pudo completar la solicitud. Inténtalo de nuevo."),
+    );
   }
-  return (await res.json()) as T;
+  return data as T;
+}
+export const jsonRequest = (method: string, data: unknown): RequestInit => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data),
+});
+
+/** Shared by wallet sign-in and direct Storage uploads from main. */
+export function postJson<T>(path: string, body: unknown): Promise<T> {
+  return api<T>(path, jsonRequest("POST", body));
 }

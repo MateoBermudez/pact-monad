@@ -3,6 +3,7 @@ import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
 import { AVAILABILITIES, MAX_LINKS, MAX_SKILLS } from "@/lib/shared/profile";
 import { normalizeUsername, usernameError } from "@/lib/shared/username";
+import { WEBHOOK_EVENTS } from "@/lib/shared/webhooks";
 
 export const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Hash de transacción inválido");
 
@@ -159,3 +160,16 @@ export const rateAgreementSchema = z.object({
   comment: z.string().trim().max(500).optional(),
 });
 export type RateAgreementInput = z.infer<typeof rateAgreementSchema>;
+
+export const createWebhookSchema = z.object({
+  url: z.string().trim().min(8).max(512),
+  events: z.array(z.enum(WEBHOOK_EVENTS)).max(WEBHOOK_EVENTS.length).default([]),
+});
+export type CreateWebhookInput = z.infer<typeof createWebhookSchema>;
+
+export const updateWebhookSchema = z.object({
+  url: z.string().trim().min(8).max(512).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENTS)).max(WEBHOOK_EVENTS.length).optional(),
+  active: z.boolean().optional(),
+});
+export type UpdateWebhookInput = z.infer<typeof updateWebhookSchema>;

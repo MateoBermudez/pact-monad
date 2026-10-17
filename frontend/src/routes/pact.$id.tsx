@@ -24,7 +24,7 @@ const input =
 
 function PactPage() {
   const { id } = Route.useParams();
-  const { pacts, updatePact, connected, setConnected, aiAutoApprove, aiLimit, receive } = useDemo();
+  const { address, pacts, updatePact, connected, connectWallet, aiAutoApprove, aiLimit, receive } = useDemo();
   const [aiOk, setAiOk] = useState(true);
   const [aiReleasing, setAiReleasing] = useState(false);
   const pact = pacts.find((p) => p.id === id);
@@ -49,8 +49,8 @@ function PactPage() {
   const setStatus = (s: Status) => updatePact(id, { status: s });
   const idx = STEPS.indexOf(status);
   const isClient = role === "cliente";
-  const clientAddr = isClient ? CLIENT : pact.counterparty;
-  const providerAddr = isClient ? pact.counterparty : CLIENT;
+  const clientAddr = isClient ? address : pact.counterparty;
+  const providerAddr = isClient ? pact.counterparty : address;
   const withinLimit = aiCanRelease(amount, aiAutoApprove, aiLimit);
 
   const aiRelease = () => {
@@ -76,9 +76,11 @@ function PactPage() {
         <ArrowLeft className="h-4 w-4" /> Mis acuerdos
       </Link>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="font-mono text-muted-foreground">PACT #{id}</span>
-          <span className={`rounded-full px-2.5 py-1 font-semibold ${badge[status]}`}>{status}</span>
+          <span className={`rounded-full px-2.5 py-1 font-semibold ${badge[status]}`}>
+            {status === "Creado" ? "Pendiente de aceptación" : status}
+          </span>
           <span className="rounded-full border border-border px-2.5 py-1 text-muted-foreground">Eres {role}</span>
         </div>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
@@ -234,7 +236,16 @@ function PactPage() {
       {!connected ? (
         <div className="card flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-between sm:text-left">
           <p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Conecta tu wallet para participar</p>
-          <button onClick={() => setConnected(true)} className="btn-primary"><Wallet className="h-4 w-4" /> Conectar MetaMask</button>
+          <button
+            onClick={() => {
+              void connectWallet().catch((err) =>
+                toast.error(err instanceof Error ? err.message : "No se pudo conectar MetaMask."),
+              );
+            }}
+            className="btn-primary"
+          >
+            <Wallet className="h-4 w-4" /> Conectar MetaMask
+          </button>
         </div>
       ) : (
         <Actions isClient={isClient} status={status} setStatus={setStatus} amount={amount} />

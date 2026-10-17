@@ -9,6 +9,7 @@ import { serverEnv } from "@/lib/server/env";
 import { ApiError, conflict, notFound } from "@/lib/server/http";
 import { withCredits } from "@/lib/server/services/credits";
 import { computeRulesHash, loadRules } from "@/lib/server/services/rules";
+import { emitWebhook } from "@/lib/server/services/webhooks";
 import type {
   CriterionResultDto,
   DecisionDto,
@@ -241,7 +242,14 @@ async function insertDecision(
       decisionHash,
     ],
   );
-  return toDecisionDto(row);
+  const decision = toDecisionDto(row);
+  await emitWebhook(pool(), {
+    type: "decision.created",
+    recipients: [{ userId: agreement.client_id, role: "client" }],
+    data: { agreementId: agreement.id, decisionId: decision.id, verdict: decision.verdict, kind: decision.kind, executed: false },
+    dedupe: decision.id,
+  });
+  return decision;
 }
 
 // Paga desde el agente. La decisión ya está guardada: si la transacción falla, el registro queda sin ejecutar y

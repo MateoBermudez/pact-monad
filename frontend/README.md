@@ -1,19 +1,19 @@
-# PACT: maqueta visual
+# PACT: interfaz migrada a Next.js
 
-Interfaz React con TanStack Start y Tailwind. Incluye el estado visual actual de PACT: ilustraciones animadas, tipografía Intropol, logos, favicon, cards y encabezado.
+La aplicación principal vive ahora en `../app/`: frontend y API comparten Next.js, origen y sesión.
 
-## Desarrollo
+Desde esta carpeta, `pnpm dev`, `pnpm build`, `pnpm start`, `pnpm lint` y `pnpm test` delegan a `../app/`.
 
-Requiere Node.js y npm. Ejecutar desde esta carpeta:
+Para instalar y configurar:
 
-    npm ci
-    npm run dev
+```sh
+cd ../app
+pnpm install --frozen-lockfile
+# Completar .env.local a partir de .env.example
+pnpm db:migrate
+pnpm dev
+```
 
-## Validación
+La migración 008 vincula los acuerdos con proveedor directo a sus reglas confirmadas. No hay que configurar `VITE_API_URL` ni `BACKEND_URL` para la aplicación Next.js.
 
-    npm run build
-    npm test
-
-El estado de demostración está en src/lib/demo.tsx. Este frontend todavía no está conectado al backend Next.js de ../app ni a los contratos de ../contracts.
-
-Importado desde el estado de trabajo de pact-escrow, sin copiar su historial de Git ni su configuración de conexión a Lovable.
+Los archivos `src/` y `public/` de esta carpeta se conservan como referencia histórica de la maqueta TanStack. No son el frontend activo. Para ejecutarla explícitamente: `pnpm dev:legacy`; sus pruebas antiguas: `pnpm test:legacy`.
