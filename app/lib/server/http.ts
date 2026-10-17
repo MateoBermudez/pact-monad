@@ -47,6 +47,12 @@ function toResponse(error: unknown): Response {
   return Response.json({ error: "unavailable" }, { status: 503 });
 }
 
+export function parseId(value: string): string {
+  const result = z.string().uuid().safeParse(value);
+  if (!result.success) throw notFound();
+  return result.data;
+}
+
 export async function readJson<S extends z.ZodType>(request: Request, schema: S): Promise<z.infer<S>> {
   const raw: unknown = await request.json().catch(() => undefined);
   const result = schema.safeParse(raw);
