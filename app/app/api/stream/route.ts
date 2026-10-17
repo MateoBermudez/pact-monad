@@ -9,6 +9,14 @@ const PING_MS = 15_000;
 // El navegador reconecta solo (EventSource); cerrar cada tanto evita conexiones colgadas y respeta los límites de hosting.
 const MAX_STREAM_MS = 4 * 60_000;
 
+function closeQuietly(controller: ReadableStreamDefaultController<Uint8Array>): void {
+  try {
+    controller.close();
+  } catch {
+    return;
+  }
+}
+
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, ms);
@@ -47,7 +55,7 @@ export const GET = authed(async ({ request, user }) => {
             console.error("[stream]", error);
           }
         }
-        controller.close();
+        closeQuietly(controller);
       } catch (error) {
         console.error("[stream] no se pudo abrir:", error);
         controller.error(error);
