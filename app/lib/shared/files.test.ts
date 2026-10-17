@@ -16,6 +16,6 @@ describe("reglas de archivos", () => {
   });
 
   it("un brief no supera lo que pact-ai puede procesar", () => {
-    assert.equal(FILE_RULES.brief.maxBytes, 7 * 1024 * 1024);
+    assert.equal(FILE_RULES.brief.maxBytes, 3 * 1024 * 1024);
   });
 });
