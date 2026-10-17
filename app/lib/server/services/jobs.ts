@@ -5,12 +5,13 @@ import { query } from "@/lib/server/db";
 import { ApiError } from "@/lib/server/http";
 import { ensureMonthlyGrant, getBalance } from "@/lib/server/services/credits";
 import { reviewAgreement } from "@/lib/server/services/decisions";
+import { screenApplication } from "@/lib/server/services/screening";
 import { CREDIT_COSTS } from "@/lib/shared/credits";
 
 const LEASE_SECONDS = 300;
 const reviewPayloadSchema = z.object({ agreementId: z.string().uuid() });
 
-export type Job = { id: string; kind: "review_delivery"; payload: unknown; attempts: number; maxAttempts: number };
+export type Job = { id: string; kind: "review_delivery" | "screen_application"; payload: unknown; attempts: number; maxAttempts: number };
 export type JobOutcome = "done" | "retry" | "failed";
 
 // Se llama dentro de la transacción del indexador: la tarea nace junto con el evento y no se puede perder.
@@ -62,7 +63,8 @@ async function reviewDelivery(payload: unknown): Promise<void> {
 
 export async function runJob(job: Job): Promise<JobOutcome> {
   try {
-    await reviewDelivery(job.payload);
+    if (job.kind === "screen_application") await screenApplication(job.payload);
+    else await reviewDelivery(job.payload);
     await query("update jobs set status = 'done', finished_at = now(), last_error = null where id = $1", [job.id]);
     return "done";
   } catch (error) {

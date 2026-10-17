@@ -4,6 +4,8 @@ import { agentAddress, configuredContractAddress, readMaxAutoRelease } from "@/l
 import { query } from "@/lib/server/db";
 import { serverEnv } from "@/lib/server/env";
 import { trimMon } from "@/lib/shared/money";
+import type { ScreeningMode } from "@/lib/shared/listings";
+import { DEFAULT_SCREENING_MODE, type ScreeningSettingsDto, type ScreeningSettingsInput } from "@/lib/shared/schemas";
 
 export type AiSettingsDto = {
   enabled: boolean;
@@ -36,4 +38,22 @@ export async function loadAiSettings(userId: string): Promise<AiSettingsDto> {
     agentAddress: serverEnv.agentPrivateKey ? agentAddress() : null,
     contractAddress: configuredContractAddress(),
   };
+}
+
+export async function loadScreeningSettings(userId: string): Promise<ScreeningSettingsDto> {
+  const [row] = await query<{ mode: ScreeningMode; criteria: string | null }>(
+    "select screening_mode as mode, screening_criteria as criteria from ai_settings where user_id = $1",
+    [userId],
+  );
+  return { mode: row?.mode ?? DEFAULT_SCREENING_MODE, criteria: row?.criteria ?? "" };
+}
+
+export async function saveScreeningSettings(userId: string, input: ScreeningSettingsInput): Promise<ScreeningSettingsDto> {
+  await query(
+    `insert into ai_settings (user_id, screening_mode, screening_criteria) values ($1, $2, $3)
+     on conflict (user_id) do update set screening_mode = excluded.screening_mode,
+       screening_criteria = excluded.screening_criteria, updated_at = now()`,
+    [userId, input.mode, input.criteria ? input.criteria : null],
+  );
+  return loadScreeningSettings(userId);
 }

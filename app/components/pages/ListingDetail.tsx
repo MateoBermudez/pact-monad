@@ -24,13 +24,14 @@ import type {
   ApplicationDto,
   SelectionResultDto,
   CreateAgreementParams,
+  ScreeningDto,
 } from "@/lib/shared/listings";
 
 export default function ListingDetail({ id }: { id: string }) {
   const state = useResource<{ listing: ListingDto }>(`/api/listings/${id}`);
   const session = useResource<{ user: SessionUser }>("/api/auth/me");
   const router = useRouter();
-  const { connectWallet, connected, refresh } = usePact();
+  const { connectWallet, connected, refresh, changes } = usePact();
   const listing = state.data?.listing;
   const owner = !!listing && listing.clientId === session.data?.user.id;
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,7 @@ export default function ListingDetail({ id }: { id: string }) {
     return () => {
       active = false;
     };
-  }, [id, owner, listing?.status]);
+  }, [id, owner, listing?.status, changes]);
   async function perform(run: () => Promise<unknown>) {
     if (busy) return;
     setBusy(true);
@@ -418,6 +419,7 @@ export default function ListingDetail({ id }: { id: string }) {
                         label="Plazo"
                       />
                     </div>
+                    {app.screening && <ScreeningNote screening={app.screening} />}
                     {app.match && (
                       <p className="field-help">
                         Encaje {Math.round(app.match.breakdown.total)}/100 ·{" "}
@@ -586,6 +588,40 @@ export default function ListingDetail({ id }: { id: string }) {
     </Workspace>
   );
 }
+const splitKeywords = (value: string) =>
+  [...new Set(value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean))].slice(0, 20);
+
+const VERDICT_LABEL = {
+  accept: "La IA recomienda aceptarla",
+  review: "La IA sugiere revisarla",
+  reject: "La IA recomienda descartarla",
+} as const;
+
+function ScreeningNote({ screening }: { screening: ScreeningDto }) {
+  return (
+    <div className={`screening-note screening-${screening.verdict}`}>
+      <p className="screening-title">
+        {VERDICT_LABEL[screening.verdict]} · {screening.score}/100
+      </p>
+      <p>{screening.summary}</p>
+      {screening.strengths.length > 0 && (
+        <ul>
+          {screening.strengths.map((item) => (
+            <li key={item}>+ {item}</li>
+          ))}
+        </ul>
+      )}
+      {screening.concerns.length > 0 && (
+        <ul>
+          {screening.concerns.map((item) => (
+            <li key={item}>− {item}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ListingEditor({
   listing,
   onSaved,
@@ -597,6 +633,7 @@ function ListingEditor({
   const [description, setDescription] = useState(listing.description ?? "");
   const [amount, setAmount] = useState(listing.budgetMon ?? "");
   const [days, setDays] = useState(String(listing.deadlineDays ?? ""));
+  const [keywords, setKeywords] = useState(listing.keywords.join(", "));
   const [rules, setRules] = useState(
     listing.rules?.map((r) => r.criterion).join("\n") ?? "",
   );
@@ -615,6 +652,7 @@ function ListingEditor({
           ...(description.trim() ? { description } : {}),
           ...(amount ? { budgetMon: Number(amount) } : {}),
           ...(days ? { deadlineDays: Number(days) } : {}),
+          keywords: splitKeywords(keywords),
         }),
       );
       const criteria = rules
@@ -668,6 +706,7 @@ function ListingEditor({
               description,
               budgetMon: Number(amount),
               deadlineDays: Number(days),
+              keywords: splitKeywords(keywords),
             }),
           );
           await api(
@@ -707,10 +746,31 @@ function ListingEditor({
           required
           minLength={10}
           maxLength={5000}
-          rows={4}
+          rows={16}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </label>
+      <label>
+        Palabras clave (separadas por comas)
+        <input
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          placeholder="backend, api rest, node.js, postgresql"
+        />
+        <span className="field-help">
+          Con ellas avisamos primero a quienes tienen esas habilidades. Si las
+          dejas vacías, las tomamos de tu texto.
+        </span>
+        {splitKeywords(keywords).length > 0 && (
+          <span className="keyword-chips">
+            {splitKeywords(keywords).map((keyword) => (
+              <span className="workspace-pill" key={keyword}>
+                {keyword}
+              </span>
+            ))}
+          </span>
+        )}
       </label>
       <div className="workspace-fields">
         <label>

@@ -81,6 +81,54 @@ Evento `listing.matched` con `nextAction.action = "apply_to_listing"` y `youAct 
 }
 ```
 
+## Del borrador a la propuesta elegida
+
+`/crear` ya no pide la wallet del proveedor: lleva a `/solicitudes/nueva`. El orden es:
+
+1. El cliente describe el trabajo o sube un brief (PDF, DOCX, imagen o texto) y la IA lo estructura en un documento por
+   secciones (contexto, alcance y entregables, requisitos del perfil, condiciones, forma de entrega, por definir), con
+   **8 a 15 palabras clave** y reglas de aceptación. Si la IA no responde, las palabras clave se sacan del texto
+   (`deriveKeywords`). Al publicar, si siguen vacías, se derivan del título y la descripción.
+2. El cliente revisa y edita todo, incluidas las palabras clave, y publica. Esas palabras y las habilidades de cada
+   prestador deciden a quién se avisa primero (ver más abajo).
+3. Los prestadores se postulan. **La wallet del proveedor no se pide nunca**: cuando el cliente (o su IA) elige a alguien,
+   se toma de su perfil. Si esa persona no tiene wallet vinculada, no se la puede elegir y se avisa.
+4. El cliente firma desde su wallet para bloquear los fondos.
+
+`/crear?provider=0x…` (desde el perfil de una persona) conserva el acuerdo directo, porque ahí la wallet ya se conoce.
+
+### Evaluación de propuestas con IA
+
+Cada postulación crea una tarea `screen_application` en la cola (misma transacción que la postulación). El worker llama a
+`POST /screen-applicant` de `pact-ai` con la oportunidad, el perfil, el portafolio, la reputación, la propuesta y los
+criterios del cliente. El resultado se guarda en `applications` (`ai_verdict`, `ai_score`, `ai_summary`,
+`ai_strengths`, `ai_concerns`) y solo lo ve el cliente. Cuesta 1 crédito (se devuelve si la IA falla; sin créditos no
+se evalúa).
+
+| Modo (`ai_settings.screening_mode`) | Qué hace |
+|---|---|
+| `assist` (por defecto) | Evalúa y **preselecciona** las que la IA recomienda aceptar. No descarta ni elige. |
+| `auto` | **Descarta** las que no encajan y **elige** la primera que la IA acepta (el resto se descarta). El cliente solo firma para bloquear fondos. Si falta su wallet o la del prestador, deja la propuesta preseleccionada y avisa. |
+| `off` | No evalúa nada. |
+
+- Se configura en **Configuración → Cómo recibes las propuestas** (`GET/PUT /api/settings/screening`, con `criteria`
+  opcional de hasta 1000 caracteres que la IA aplica al comparar).
+- La IA nunca mueve dinero: elegir solo adjudica la solicitud; los fondos se bloquean con la firma del cliente.
+- `pact-ai` no acepta con puntaje menor de 70 ni rechaza con puntaje mayor de 45: en ese caso devuelve `review`.
+- Un perfil sin portafolio ni calificaciones normalmente queda en `review`: la IA acepta solo con evidencia.
+- **El worker que ejecuta la tarea es el desplegado en producción**: el disparador de la base (migración 013) llama a
+  `app_settings.worker_url`. En local las tareas las toma ese worker; hasta que la versión nueva esté desplegada fallan.
+
+### Avisos dentro de la app (campanita)
+
+| Tipo | Para quién | Cuándo |
+|---|---|---|
+| `listing.matched` | prestador | se publica una solicitud que encaja |
+| `application.received` | cliente | alguien se postula (o la IA recomienda a alguien que no pudo elegir) |
+| `application.auto_selected` | cliente | la IA eligió a un prestador en modo `auto` |
+| `application.selected` | prestador | lo eligieron |
+| `application.rejected` | prestador | lo descartaron |
+
 ## Archivos
 
 Los briefs aceptan PDF, **DOCX**, texto, Markdown y PNG, JPEG o WebP (hasta 7 MB). El DOCX se convierte a texto en
