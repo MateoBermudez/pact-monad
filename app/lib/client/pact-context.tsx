@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, ApiRequestError } from "./api";
+import { subscribeToChanges } from "./realtime";
 import {
   linkWalletToAccount,
   fetchSession,
@@ -179,14 +180,13 @@ export function PactProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
   useEffect(() => {
     if (!user) return;
-    const stream = new EventSource("/api/stream");
     const update = () => {
       void refresh();
     };
-    stream.addEventListener("change", update);
+    const unsubscribe = subscribeToChanges(update);
     window.addEventListener("focus", update);
     return () => {
-      stream.close();
+      unsubscribe();
       window.removeEventListener("focus", update);
     };
   }, [user, refresh]);

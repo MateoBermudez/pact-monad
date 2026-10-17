@@ -48,7 +48,7 @@ const rise: Variants = {
 };
 
 export default function Landing() {
-  const { connected } = usePact();
+  const { signedIn } = usePact();
   return (
     <div className="space-y-14 pt-2">
       {/* Onboarding-style hero: lime panel, big display headline, round arrow CTA */}
@@ -95,7 +95,7 @@ export default function Landing() {
               className="flex items-center justify-between gap-4 pt-2 sm:justify-start sm:gap-8"
             >
               <Link
-                href={connected ? "/dashboard" : "/conectar"}
+                href={signedIn ? "/dashboard" : "/iniciar-sesion"}
                 className="text-sm font-semibold text-primary-foreground/70 underline-offset-4 hover:text-primary-foreground hover:underline"
               >
                 Ver mis acuerdos
@@ -195,11 +195,11 @@ export default function Landing() {
           </p>
         </div>
         <Link
-          href={connected ? "/dashboard" : "/conectar"}
+          href={signedIn ? "/dashboard" : "/iniciar-sesion"}
           className="press flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
         >
           <Wallet className="h-4 w-4" />{" "}
-          {connected ? "Ir al dashboard" : "Conectar MetaMask"}
+          {signedIn ? "Ir al dashboard" : "Iniciar sesión"}
         </Link>
       </motion.section>
     </div>

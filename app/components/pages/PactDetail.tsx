@@ -19,6 +19,7 @@ import { EXPLORER_URL } from "@/lib/shared/chain";
 import { api, jsonRequest } from "@/lib/client/api";
 import { sendEscrowAction } from "@/lib/client/escrow-wallet";
 import { usePact } from "@/lib/client/pact-context";
+import { subscribeToChanges } from "@/lib/client/realtime";
 
 export default function PactDetail({ id }: { id: string }) {
   const { refresh } = usePact();
@@ -60,12 +61,10 @@ export default function PactDetail({ id }: { id: string }) {
     };
   }, [id]);
   useEffect(() => {
-    const stream = new EventSource("/api/stream");
     const update = () => {
       void load();
     };
-    stream.addEventListener("change", update);
-    return () => stream.close();
+    return subscribeToChanges(update);
   }, [load]);
   async function action(
     method:

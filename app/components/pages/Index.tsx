@@ -340,7 +340,6 @@ export default function Index() {
     setOriginal(text);
 
     try {
-      await signIn();
       const result = await structureAgreement(text);
       setPrepared(false);
       setListingId(result.listing.id);
