@@ -33,7 +33,7 @@ export function FileUpload({
         <input
           aria-label={`Adjuntar archivo de ${purpose}`}
           type="file"
-          accept={rules.mimeTypes.join(",")}
+          accept={rules.mimeTypes?.join(",")}
           disabled={busy || disabled}
           onChange={async (e) => {
             const file = e.target.files?.[0];
@@ -46,7 +46,7 @@ export function FileUpload({
               );
               return;
             }
-            if (!rules.mimeTypes.includes(file.type)) {
+            if (rules.mimeTypes && !rules.mimeTypes.includes(file.type)) {
               setError("Ese formato de archivo no está permitido.");
               return;
             }
@@ -79,8 +79,8 @@ export function FileUpload({
           ? "PDF, texto o imagen"
           : purpose === "portfolio"
             ? "PDF, imagen o ZIP"
-            : "PDF, texto, imagen o ZIP"}
-        . Se valida al terminar la subida.
+            : "cualquier tipo de archivo"}
+        {rules.mimeTypes ? ". Se valida al terminar la subida." : "."}
       </small>
       {error && (
         <p role="alert" className="auth-error">

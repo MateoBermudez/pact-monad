@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { query } from "@/lib/server/db";
 import { ApiError, conflict, forbidden, notFound } from "@/lib/server/http";
 import { createSignedUploadUrl, deleteObject, downloadObject, signObjectUrl } from "@/lib/server/storage";
-import { DOCX_MIME, FILE_RULES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
+import { DOCX_MIME, FILE_RULES, INLINE_SAFE_MIMES, type FileDto, type FilePurpose, type UploadTicketDto } from "@/lib/shared/files";
 import type { RequestUploadInput } from "@/lib/shared/schemas";
 import { fileReference } from "@/lib/shared/file-reference";
 
@@ -74,7 +74,7 @@ export async function requestUpload(ownerId: string, input: RequestUploadInput):
   if (input.sizeBytes > rules.maxBytes) {
     throw new ApiError(413, "file_too_large", `El máximo para ${input.purpose} es ${Math.round(rules.maxBytes / 1024 / 1024)} MB`);
   }
-  if (!rules.mimeTypes.includes(input.mimeType)) {
+  if (rules.mimeTypes && !rules.mimeTypes.includes(input.mimeType)) {
     throw new ApiError(415, "unsupported_type", `Tipo no permitido para ${input.purpose}: ${input.mimeType}`);
   }
 
@@ -128,7 +128,7 @@ export async function completeUpload(ownerId: string, fileId: string): Promise<F
   if (bytes.length !== Number(row.size_bytes)) {
     await reject(row, new ApiError(400, "size_mismatch", "El tamaño del archivo no coincide con el que declaraste"));
   }
-  if (!matchesMime(bytes, row.mime_type)) {
+  if (rules.mimeTypes && !matchesMime(bytes, row.mime_type)) {
     await reject(row, new ApiError(415, "content_mismatch", "El contenido del archivo no coincide con su tipo"));
   }
 
@@ -171,7 +171,9 @@ export async function getSignedFileUrl(userId: string | null, fileId: string): P
   if (!(await canRead(userId, file))) {
     throw userId ? forbidden("No tienes acceso a este archivo") : new ApiError(401, "unauthenticated", "Inicia sesión para ver este archivo");
   }
-  return { url: await signObjectUrl(file.storage_path), file: toDto(file) };
+  // Lo que no es un formato seguro de mostrar (HTML, SVG, ejecutables...) se descarga en vez de abrirse en el navegador.
+  const download = INLINE_SAFE_MIMES.includes(file.mime_type) ? undefined : file.file_name;
+  return { url: await signObjectUrl(file.storage_path, 300, download), file: toDto(file) };
 }
 
 export async function requireOwnedFile(userId: string, fileId: string, purpose: FilePurpose): Promise<FileRow> {
