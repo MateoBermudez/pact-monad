@@ -1,4 +1,9 @@
 export const MAX_SKILLS = 10;
+export const MAX_LINKS = 5;
+export const AVAILABILITIES = ["available", "busy", "unavailable"] as const;
+export type Availability = (typeof AVAILABILITIES)[number];
+
+export type ProfileLinkDto = { label: string; url: string };
 
 export type SkillDto = { slug: string; name: string; category: string };
 
@@ -26,6 +31,10 @@ export type PortfolioItemDto = {
 export type ProfileDto = {
   id: string;
   username: string | null;
+  avatarUrl: string | null;
+  location: string | null;
+  availability: Availability;
+  links: ProfileLinkDto[];
   wallet: string | null;
   displayName: string | null;
   headline: string | null;
@@ -41,6 +50,9 @@ export type PublicProfileDto = ProfileDto & { portfolio: PortfolioItemDto[] };
 export type ProviderSummaryDto = {
   id: string;
   username: string | null;
+  avatarUrl: string | null;
+  location: string | null;
+  availability: Availability;
   wallet: string | null;
   displayName: string | null;
   headline: string | null;

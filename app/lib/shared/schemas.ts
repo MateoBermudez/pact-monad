@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { OAUTH_PROVIDERS } from "@/lib/shared/auth";
 import { FILE_PURPOSES } from "@/lib/shared/files";
-import { MAX_SKILLS } from "@/lib/shared/profile";
+import { AVAILABILITIES, MAX_LINKS, MAX_SKILLS } from "@/lib/shared/profile";
 import { normalizeUsername, usernameError } from "@/lib/shared/username";
 
 export const txHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Hash de transacción inválido");
@@ -32,7 +32,31 @@ export const purchaseCreditsSchema = z.object({ txHash: txHashSchema });
 
 export const filePurposeSchema = z.enum(FILE_PURPOSES);
 
+const httpUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .max(512)
+  .refine((value) => /^https?:\/\//i.test(value), "El enlace debe empezar con http:// o https://");
+
+const httpsUrlSchema = httpUrlSchema.refine((value) => /^https:\/\//i.test(value), "El enlace debe empezar con https://");
+
+const profileLinkSchema = z.object({ label: z.string().trim().min(1).max(30), url: httpUrlSchema });
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => value || null)
+    .nullable()
+    .optional();
+
 export const updateProfileSchema = z.object({
+  avatarUrl: httpsUrlSchema.nullable().optional(),
+  location: optionalText(80),
+  availability: z.enum(AVAILABILITIES).optional(),
+  links: z.array(profileLinkSchema).max(MAX_LINKS, `Puedes agregar hasta ${MAX_LINKS} enlaces`).optional(),
   displayName: z.string().trim().min(1).max(60).nullable().optional(),
   headline: z.string().trim().max(120).nullable().optional(),
   bio: z.string().trim().max(1000).nullable().optional(),
@@ -48,7 +72,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export const createPortfolioItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(1000).optional(),
-  url: z.string().url().max(512).optional(),
+  url: httpUrlSchema.optional(),
   fileId: uuidSchema.optional(),
   tags: z.array(z.string().max(60)).max(20).default([]),
 });
