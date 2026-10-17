@@ -10,6 +10,11 @@ export const serverEnv = {
   indexerBlockTag: process.env.INDEXER_BLOCK_TAG === "latest" ? "latest" : "finalized",
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
+  frontendOrigins: (process.env.FRONTEND_ORIGINS ?? "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean),
   storageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "pact-files",
   treasuryAddress: (process.env.TREASURY_ADDRESS ?? "").toLowerCase(),
   agentPrivateKey: process.env.AGENT_PRIVATE_KEY ?? "",
