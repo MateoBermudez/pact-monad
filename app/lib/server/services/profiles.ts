@@ -3,8 +3,10 @@ import { query, withTransaction } from "@/lib/server/db";
 import { ApiError, notFound } from "@/lib/server/http";
 import { normalizeKeywords } from "@/lib/shared/keywords";
 import type {
+  Availability,
   PortfolioItemDto,
   ProfileDto,
+  ProfileLinkDto,
   ProviderSummaryDto,
   PublicProfileDto,
   ReputationDto,
@@ -13,9 +15,17 @@ import type {
 } from "@/lib/shared/profile";
 import type { UpdateProfileInput } from "@/lib/shared/schemas";
 
+const PROFILE_COLUMNS =
+  "id, username, avatar_url, location, availability, links, wallet, display_name, headline, bio, keywords, is_agent";
+
 type UserRow = {
   id: string;
-  wallet: string;
+  username: string | null;
+  avatar_url: string | null;
+  location: string | null;
+  availability: Availability;
+  links: ProfileLinkDto[];
+  wallet: string | null;
   display_name: string | null;
   headline: string | null;
   bio: string | null;
@@ -67,7 +77,7 @@ export async function listSkills(): Promise<SkillDto[]> {
 
 export async function loadProfile(userId: string): Promise<ProfileDto> {
   const [user] = await query<UserRow>(
-    "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1",
+    `select ${PROFILE_COLUMNS} from users where id = $1`,
     [userId],
   );
   if (!user) throw notFound("Usuario");
@@ -84,6 +94,11 @@ export async function loadProfile(userId: string): Promise<ProfileDto> {
 
   return {
     id: user.id,
+    username: user.username,
+    avatarUrl: user.avatar_url,
+    location: user.location,
+    availability: user.availability,
+    links: user.links,
     wallet: user.wallet,
     displayName: user.display_name,
     headline: user.headline,
@@ -106,14 +121,16 @@ export async function loadPublicProfile(userId: string): Promise<PublicProfileDt
 export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileDto> {
   await withTransaction(async (client) => {
     const { rows } = await client.query<UserRow>(
-      "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = $1 for update",
+      `select ${PROFILE_COLUMNS} from users where id = $1 for update`,
       [userId],
     );
     const current = rows[0];
     if (!current) throw notFound("Usuario");
 
     await client.query(
-      `update users set display_name = $2, headline = $3, bio = $4, keywords = $5, is_agent = $6 where id = $1`,
+      `update users set display_name = $2, headline = $3, bio = $4, keywords = $5, is_agent = $6,
+                        avatar_url = $7, location = $8, availability = $9, links = $10::jsonb
+        where id = $1`,
       [
         userId,
         input.displayName === undefined ? current.display_name : input.displayName,
@@ -121,6 +138,10 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
         input.bio === undefined ? current.bio : input.bio,
         input.keywords === undefined ? current.keywords : normalizeKeywords(input.keywords),
         input.isAgent === undefined ? current.is_agent : input.isAgent,
+        input.avatarUrl === undefined ? current.avatar_url : input.avatarUrl,
+        input.location === undefined ? current.location : input.location,
+        input.availability === undefined ? current.availability : input.availability,
+        JSON.stringify(input.links === undefined ? current.links : input.links),
       ],
     );
 
@@ -152,7 +173,7 @@ export async function loadProviderSummaries(userIds: string[]): Promise<Map<stri
 
   const [users, reputations, portfolios, skills] = await Promise.all([
     query<UserRow>(
-      "select id, wallet, display_name, headline, bio, keywords, is_agent from users where id = any($1::uuid[])",
+      `select ${PROFILE_COLUMNS} from users where id = any($1::uuid[])`,
       [userIds],
     ),
     query<ReputationRow & { user_id: string }>("select * from user_reputation where user_id = any($1::uuid[])", [userIds]),
@@ -174,6 +195,10 @@ export async function loadProviderSummaries(userIds: string[]): Promise<Map<stri
   for (const user of users) {
     summaries.set(user.id, {
       id: user.id,
+      username: user.username,
+      avatarUrl: user.avatar_url,
+      location: user.location,
+      availability: user.availability,
       wallet: user.wallet,
       displayName: user.display_name,
       headline: user.headline,

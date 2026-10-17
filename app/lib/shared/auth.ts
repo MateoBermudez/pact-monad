@@ -1,8 +1,14 @@
+export const OAUTH_PROVIDERS = ["google", "github"] as const;
+export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
 export type AuthMethod = "session" | "api_key";
 
 export type SessionUser = {
   id: string;
-  wallet: string;
+  username: string | null;
+  wallet: string | null;
+  email: string | null;
+  avatarUrl: string | null;
   displayName: string | null;
   isAgent: boolean;
   via: AuthMethod;
@@ -16,4 +22,16 @@ export type AgentKeyDto = {
   lastUsedAt: string | null;
   expiresAt: string | null;
   revokedAt: string | null;
+};
+
+export type IdentityDto = {
+  provider: string;
+  email: string | null;
+  linkedAt: string;
+};
+
+export type OnboardingStatus = {
+  needsUsername: boolean;
+  needsSkills: boolean;
+  complete: boolean;
 };

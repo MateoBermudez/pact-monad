@@ -3,7 +3,7 @@ import type { RuleDto } from "@/lib/shared/listings";
 
 export type AgreementRole = "client" | "provider";
 
-export type CounterpartyDto = { id: string; wallet: string; displayName: string | null };
+export type CounterpartyDto = { id: string; username: string | null; wallet: string; displayName: string | null };
 
 export type AgreementDto = {
   id: string;
@@ -11,6 +11,8 @@ export type AgreementDto = {
   contractAddress: string;
   listingId: string | null;
   listingTitle: string | null;
+  createdById: string;
+  createdByUsername: string | null;
   role: AgreementRole;
   counterparty: CounterpartyDto;
   amountMon: string;
@@ -107,7 +109,7 @@ export type ActivityDto = {
 };
 
 export type DashboardDto = {
-  wallet: string;
+  wallet: string | null;
   availableMon: string | null;
   lockedMon: string;
   incomingPendingMon: string;

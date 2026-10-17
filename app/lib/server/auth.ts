@@ -15,13 +15,26 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60_000;
 const RENEW_AFTER_MS = 24 * 60 * 60_000;
 const SESSION_MAX_AGE_DAYS = 90;
 
-type UserRow = { id: string; wallet: string; display_name: string | null; is_agent: boolean };
+export const USER_COLUMNS = "id, username, wallet, email, avatar_url, display_name, is_agent";
+
+export type UserRow = {
+  id: string;
+  username: string | null;
+  wallet: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  display_name: string | null;
+  is_agent: boolean;
+};
 
 export const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
-const toSessionUser = (row: UserRow, via: AuthMethod): SessionUser => ({
+export const toSessionUser = (row: UserRow, via: AuthMethod): SessionUser => ({
   id: row.id,
+  username: row.username,
   wallet: row.wallet,
+  email: row.email,
+  avatarUrl: row.avatar_url,
   displayName: row.display_name,
   isAgent: row.is_agent,
   via,
@@ -63,25 +76,27 @@ export async function issueChallenge(wallet: string, origin: URL): Promise<strin
 }
 
 // El reto se consume al leerlo: sirve para un solo intento, así una firma robada no se puede reutilizar.
-export async function verifyChallenge(wallet: string, signature: string): Promise<SessionUser | null> {
+export async function consumeChallenge(wallet: string, signature: string): Promise<boolean> {
   const [challenge] = await query<{ message: string }>(
     "delete from auth_nonces where wallet = $1 and expires_at > now() returning message",
     [wallet],
   );
-  if (!challenge) return null;
+  if (!challenge) return false;
 
-  let signer: string;
   try {
-    signer = verifyMessage(challenge.message, signature).toLowerCase();
+    return verifyMessage(challenge.message, signature).toLowerCase() === wallet;
   } catch {
-    return null;
+    return false;
   }
-  if (signer !== wallet) return null;
+}
+
+export async function verifyChallenge(wallet: string, signature: string): Promise<SessionUser | null> {
+  if (!(await consumeChallenge(wallet, signature))) return null;
 
   const [user] = await query<UserRow>(
     `insert into users (wallet) values ($1)
      on conflict (wallet) do update set wallet = excluded.wallet
-     returning id, wallet, display_name, is_agent`,
+     returning ${USER_COLUMNS}`,
     [wallet],
   );
   await query("insert into ai_settings (user_id) values ($1) on conflict do nothing", [user.id]);
@@ -116,7 +131,7 @@ async function userFromCookie(): Promise<SessionUser | null> {
 
   const tokenHash = sha256(token);
   const [row] = await query<UserRow & { last_seen_at: Date }>(
-    `select u.id, u.wallet, u.display_name, u.is_agent, s.last_seen_at
+    `select u.id, u.username, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, s.last_seen_at
        from sessions s join users u on u.id = s.user_id
       where s.token_hash = $1 and s.expires_at > now()
         and s.created_at > now() - make_interval(days => $2)`,
@@ -138,7 +153,7 @@ async function userFromApiKey(authorization: string): Promise<SessionUser | null
   if (!token?.startsWith(API_KEY_PREFIX)) return null;
 
   const [row] = await query<UserRow & { key_id: string }>(
-    `select u.id, u.wallet, u.display_name, u.is_agent, k.id as key_id
+    `select u.id, u.username, u.wallet, u.email, u.avatar_url, u.display_name, u.is_agent, k.id as key_id
        from api_keys k join users u on u.id = k.user_id
       where k.key_hash = $1 and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
         and u.is_agent`,

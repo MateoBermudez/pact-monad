@@ -1,26 +1,37 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, ShieldCheck, Wallet } from "lucide-react";
 import { usePact } from "@/lib/client/pact-context";
 
 export default function Connect() {
-  const { signIn } = usePact();
+  const { signIn, signedIn, loading } = usePact();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  if (loading) return <p role="status">Cargando tu sesión…</p>;
+  if (!signedIn)
+    return (
+      <section className="card mx-auto max-w-md space-y-4 p-6">
+        <h1 className="text-2xl font-bold">Primero inicia sesión</h1>
+        <p>Accede con Google o GitHub antes de conectar MetaMask.</p>
+        <Link href="/iniciar-sesion" className="btn-primary">
+          Iniciar sesión
+        </Link>
+      </section>
+    );
   return (
     <div className="mx-auto max-w-md space-y-6 pt-6">
       <section className="card space-y-6 border-2 border-ink text-center">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink text-primary">
           <Wallet className="h-7 w-7" />
         </span>
-        <h1 className="font-display text-2xl font-bold">
-          Inicia sesión en PACT
-        </h1>
+        <h1 className="font-display text-2xl font-bold">Vincula tu wallet</h1>
         <p className="text-sm text-muted-foreground">
-          Conecta MetaMask y firma el mensaje de acceso. Verificamos la firma
-          con el servidor para abrir tu sesión. No cuesta gas.
+          Conecta MetaMask y firma un mensaje para demostrar que la dirección es
+          tuya. La guardaremos en tu cuenta para las transacciones. Esta firma
+          no cuesta gas.
         </p>
         {error && (
           <p role="alert" className="rounded-xl bg-warning/10 p-3 text-sm">

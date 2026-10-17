@@ -27,6 +27,8 @@ export function Header() {
     wrongNetwork,
     switchNetwork,
     balance,
+    signedIn,
+    loading,
   } = usePact();
   return (
     <>
@@ -117,10 +119,15 @@ export function Header() {
               </div>
             ) : (
               <Link
-                href="/conectar"
+                href={signedIn ? "/conectar" : "/iniciar-sesion"}
                 className="btn-primary h-10 px-4 py-0 text-xs"
               >
-                <Wallet className="h-4 w-4" /> Conectar MetaMask
+                <Wallet className="h-4 w-4" />{" "}
+                {loading
+                  ? "Cargando…"
+                  : signedIn
+                    ? "Conectar MetaMask"
+                    : "Iniciar sesión"}
               </Link>
             )}
           </div>
@@ -244,13 +251,14 @@ export function ConnectGate({ children }: { children: ReactNode }) {
         <Wallet className="h-6 w-6 text-primary" />
       </span>
       <h1 className="font-display text-xl font-bold">
-        Conecta tu wallet para continuar
+        Inicia sesión para continuar
       </h1>
       <p className="text-sm text-muted-foreground">
-        Tu wallet es tu identidad en PACT. Sin contraseñas ni correos.
+        Accede con Google o GitHub. Después podrás vincular tu wallet para las
+        transacciones.
       </p>
-      <Link href="/conectar" className="btn-primary">
-        Conectar MetaMask
+      <Link href="/iniciar-sesion" className="btn-primary">
+        Iniciar sesión
       </Link>
     </div>
   );

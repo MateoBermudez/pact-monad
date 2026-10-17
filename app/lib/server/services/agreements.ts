@@ -31,8 +31,10 @@ type AgreementRow = {
   updated_at: Date;
   client_wallet: string;
   client_name: string | null;
+  client_username: string | null;
   provider_wallet: string;
   provider_name: string | null;
+  provider_username: string | null;
   latest_verdict: DecisionVerdict | null;
   i_rated: boolean;
 };
@@ -42,8 +44,8 @@ const SELECT_AGREEMENT = `
          l.title as listing_title, l.rules_version, a.client_id, a.provider_id, a.amount_wei::text as amount_wei,
          a.deadline, a.status, a.description, a.evidence_url, a.provider_note, a.rules_hash, a.create_tx,
          a.created_at, a.updated_at,
-         cu.wallet as client_wallet, cu.display_name as client_name,
-         pu.wallet as provider_wallet, pu.display_name as provider_name,
+         cu.wallet as client_wallet, cu.display_name as client_name, cu.username as client_username,
+         pu.wallet as provider_wallet, pu.display_name as provider_name, pu.username as provider_username,
          (select d.verdict from decisions d where d.agreement_id = a.id order by d.created_at desc limit 1) as latest_verdict,
          exists (select 1 from ratings r where r.agreement_id = a.id and r.rater_id = $1) as i_rated
     from agreements a
@@ -59,10 +61,12 @@ const toDto = (row: AgreementRow, userId: string): AgreementDto => {
     contractAddress: row.contract_address,
     listingId: row.listing_id,
     listingTitle: row.listing_title,
+    createdById: row.client_id,
+    createdByUsername: row.client_username,
     role: isClient ? "client" : "provider",
     counterparty: isClient
-      ? { id: row.provider_id, wallet: row.provider_wallet, displayName: row.provider_name }
-      : { id: row.client_id, wallet: row.client_wallet, displayName: row.client_name },
+      ? { id: row.provider_id, username: row.provider_username, wallet: row.provider_wallet, displayName: row.provider_name }
+      : { id: row.client_id, username: row.client_username, wallet: row.client_wallet, displayName: row.client_name },
     amountMon: trimMon(formatEther(BigInt(row.amount_wei))),
     deadline: row.deadline.toISOString(),
     status: row.status,

@@ -10,6 +10,7 @@ export type RuleDto = { position: number; criterion: string; weight: number; sou
 export type ListingDto = {
   id: string;
   clientId: string;
+  clientUsername: string | null;
   clientName: string | null;
   clientScore: number;
   title: string;

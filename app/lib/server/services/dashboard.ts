@@ -95,7 +95,7 @@ export async function loadDashboard(user: SessionUser): Promise<DashboardDto> {
       [user.id, contract, user.wallet],
     ),
     getBalance(user.id),
-    availableBalance(user.wallet),
+    user.wallet ? availableBalance(user.wallet) : null,
   ]);
 
   const asClient = emptyCounts();

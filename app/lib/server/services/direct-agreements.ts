@@ -1,6 +1,6 @@
 import "server-only";
 import { withTransaction } from "@/lib/server/db";
-import { conflict, forbidden } from "@/lib/server/http";
+import { conflict, forbidden, requireWallet } from "@/lib/server/http";
 import { createListing, requireOwnListing } from "./listings";
 import { computeRulesHash, loadRules, saveRulesVersion } from "./rules";
 import type { SessionUser } from "@/lib/shared/auth";
@@ -15,7 +15,7 @@ export async function prepareDirectAgreement(
   input: DirectAgreementInput,
 ): Promise<PreparedAgreement> {
   const provider = input.provider.toLowerCase();
-  if (provider === user.wallet.toLowerCase())
+  if (provider === requireWallet(user).toLowerCase())
     throw forbidden("Cliente y proveedor deben tener wallets distintas.");
   const listingId =
     input.listingId ??

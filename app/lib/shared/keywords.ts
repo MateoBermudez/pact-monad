@@ -1,4 +1,4 @@
-const MAX_KEYWORDS = 20;
+export const MAX_KEYWORDS = 20;
 const MAX_KEYWORD_LENGTH = 40;
 
 export function normalizeKeywords(input: readonly string[]): string[] {

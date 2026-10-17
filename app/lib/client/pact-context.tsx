@@ -10,14 +10,13 @@ import {
 } from "react";
 import { api, ApiRequestError } from "./api";
 import {
-  ensureSession,
+  linkWalletToAccount,
   fetchSession,
   signOut,
   watchWalletAccount,
 } from "./auth";
 import {
   connectMetaMask,
-  getChainId,
   getWalletBalanceMon,
   MONAD_CHAIN_ID,
   switchToMonadTestnet,
@@ -89,6 +88,8 @@ export function PactProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   const connectWallet = useCallback(async () => {
+    const { user: session } = await linkWalletToAccount();
+    setUser(session);
     const wallet = await connectMetaMask();
     setAddress(wallet.address);
     setIsConnected(true);
@@ -102,8 +103,6 @@ export function PactProvider({ children }: { children: ReactNode }) {
     if (address) setBalance(await getWalletBalanceMon(address));
   }, [address]);
   const signIn = useCallback(async () => {
-    const session = await ensureSession();
-    setUser(session);
     await connectWallet();
     await refresh();
   }, [connectWallet, refresh]);
@@ -161,26 +160,10 @@ export function PactProvider({ children }: { children: ReactNode }) {
     const eth = (
       typeof window === "undefined" ? undefined : window.ethereum
     ) as WalletEvents | undefined;
-    void eth
-      ?.request({ method: "eth_accounts" })
-      .then(async (accounts) => {
-        if (
-          !active ||
-          !Array.isArray(accounts) ||
-          typeof accounts[0] !== "string"
-        )
-          return;
-        setAddress(accounts[0]);
-        setIsConnected(true);
-        setWrongNetwork((await getChainId()) !== MONAD_CHAIN_ID);
-        setBalance(await getWalletBalanceMon(accounts[0]));
-      })
-      .catch(() => undefined);
-    const stop = watchWalletAccount((account) => {
+    const stop = watchWalletAccount(() => {
       if (!active) return;
-      setAddress(account ?? "");
-      setIsConnected(!!account);
-      setUser(null);
+      setAddress("");
+      setIsConnected(false);
       setPacts([]);
     });
     const chainChanged = (chain: unknown) => {
@@ -212,11 +195,7 @@ export function PactProvider({ children }: { children: ReactNode }) {
       value={{
         address,
         connected,
-        signedIn:
-          !!user &&
-          (!address ||
-            !user.wallet ||
-            user.wallet.toLowerCase() === address.toLowerCase()),
+        signedIn: !!user,
         loading,
         error,
         balance,

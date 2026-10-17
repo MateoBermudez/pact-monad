@@ -18,6 +18,10 @@ vi.mock("@/lib/server/db", () => ({
 vi.mock("@/lib/server/http", () => ({
   conflict: (message: string) => new Error(message),
   forbidden: (message: string) => new Error(message),
+  requireWallet: (user: { wallet: string | null }) => {
+    if (!user.wallet) throw new Error("wallet_required");
+    return user.wallet;
+  },
 }));
 vi.mock("@/lib/server/services/listings", () => ({
   createListing: mocks.create,
@@ -32,7 +36,10 @@ const client = "0x1234567890abcdef1234567890abcdef12345678";
 const provider = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 const user: SessionUser = {
   id: "client",
+  username: null,
   wallet: client,
+  email: null,
+  avatarUrl: null,
   displayName: null,
   isAgent: false,
   via: "session",
