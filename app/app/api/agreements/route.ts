@@ -1,4 +1,8 @@
 import { authed } from "@/lib/server/http";
-import { listAgreementsFor } from "@/lib/server/services/agreements";
+import { listAgreements } from "@/lib/server/services/agreements";
+import { syncAndProcess } from "@/lib/server/services/sync";
 
-export const GET = authed(async ({ user }) => ({ agreements: await listAgreementsFor(user.id) }));
+export const GET = authed(async ({ user }) => {
+  await syncAndProcess().catch(() => undefined);
+  return { agreements: await listAgreements(user) };
+});

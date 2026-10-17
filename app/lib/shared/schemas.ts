@@ -52,6 +52,14 @@ const optionalText = (max: number) =>
     .nullable()
     .optional();
 
+export const requestUploadSchema = z.object({
+  purpose: filePurposeSchema,
+  fileName: z.string().trim().min(1).max(200),
+  mimeType: z.string().trim().min(1).max(100),
+  sizeBytes: z.number().int().min(1).max(100 * 1024 * 1024),
+});
+export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
+
 export const updateProfileSchema = z.object({
   avatarUrl: httpsUrlSchema.nullable().optional(),
   location: optionalText(80),
@@ -142,3 +150,12 @@ export const createAgentKeySchema = z.object({
   expiresInDays: z.number().int().min(1).max(365).optional(),
 });
 export type CreateAgentKeyInput = z.infer<typeof createAgentKeySchema>;
+
+export const reviewAgreementSchema = z.object({ release: z.boolean().default(false) });
+export type ReviewAgreementInput = z.infer<typeof reviewAgreementSchema>;
+
+export const rateAgreementSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(500).optional(),
+});
+export type RateAgreementInput = z.infer<typeof rateAgreementSchema>;

@@ -1,6 +1,8 @@
 import { authed, parseId } from "@/lib/server/http";
-import { getAgreementFor } from "@/lib/server/services/agreements";
+import { getAgreementDetail } from "@/lib/server/services/agreements";
+import { syncAndProcess } from "@/lib/server/services/sync";
 
-export const GET = authed<{ id: string }>(async ({ params, user }) => ({
-  agreement: await getAgreementFor(user.id, parseId(params.id)),
-}));
+export const GET = authed<{ id: string }>(async ({ params, user }) => {
+  await syncAndProcess().catch(() => undefined);
+  return { agreement: await getAgreementDetail(user, parseId(params.id)) };
+});

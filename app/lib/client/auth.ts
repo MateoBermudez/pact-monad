@@ -1,5 +1,6 @@
 import "client-only";
 import type { Eip1193Provider } from "ethers";
+import { postJson } from "@/lib/client/api";
 import { connectWallet } from "@/lib/client/wallet";
 import type { IdentityDto, OAuthProvider, SessionUser } from "@/lib/shared/auth";
 
@@ -19,16 +20,6 @@ const USER_REJECTED_CODE = 4001;
 function isRejection(error: unknown): boolean {
   const code = (error as { code?: unknown } | null)?.code;
   return code === USER_REJECTED_CODE || code === "ACTION_REJECTED";
-}
-
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`${path} respondió ${res.status}`);
-  return (await res.json()) as T;
 }
 
 // Conecta MetaMask, cambia a Monad Testnet, firma el reto del servidor y abre sesión. Firmar no cuesta gas.

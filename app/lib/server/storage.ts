@@ -13,16 +13,17 @@ function config() {
 }
 
 const objectUrl = (base: string, scope: string, path: string) =>
-  `${base}/object/${scope}${scope.endsWith("/") ? "" : "/"}${serverEnv.storageBucket}/${path}`;
+  [base, "object", scope, serverEnv.storageBucket, path].filter(Boolean).join("/");
 
-export async function uploadObject(path: string, bytes: Uint8Array<ArrayBuffer>, contentType: string): Promise<void> {
+// URL de un solo uso para que el navegador suba el archivo directo a Storage, sin pasar por una función del servidor
+// (Vercel rechaza cuerpos de más de 4,5 MB). Vale unas 2 horas.
+export async function createSignedUploadUrl(path: string): Promise<string> {
   const { base, headers } = config();
-  const res = await fetch(objectUrl(base, "", path), {
-    method: "POST",
-    headers: { ...headers, "content-type": contentType, "x-upsert": "false" },
-    body: new Blob([bytes], { type: contentType }),
-  });
-  if (!res.ok) throw new Error(`Storage rechazó la subida (${res.status})`);
+  const res = await fetch(objectUrl(base, "upload/sign", path), { method: "POST", headers });
+  if (!res.ok) throw new Error(`Storage no pudo crear la URL de subida (${res.status})`);
+  const body = (await res.json()) as { url?: string };
+  if (!body.url) throw new Error("Storage devolvió una URL de subida vacía");
+  return `${base}${body.url}`;
 }
 
 export async function downloadObject(path: string): Promise<Uint8Array<ArrayBuffer>> {

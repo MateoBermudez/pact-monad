@@ -5,7 +5,8 @@ const MB = 1024 * 1024;
 
 export const FILE_RULES: Record<FilePurpose, { maxBytes: number; mimeTypes: readonly string[] }> = {
   brief: {
-    maxBytes: 10 * MB,
+    // pact-ai acepta hasta 7 MB por archivo: un brief más grande no se podría analizar.
+    maxBytes: 7 * MB,
     mimeTypes: ["application/pdf", "text/plain", "text/markdown", "image/png", "image/jpeg", "image/webp"],
   },
   portfolio: {
@@ -26,4 +27,12 @@ export type FileDto = {
   sizeBytes: number;
   sha256: string;
   createdAt: string;
+};
+
+export type UploadTicketDto = {
+  fileId: string;
+  uploadUrl: string;
+  method: "PUT";
+  headers: { "content-type": string };
+  expiresInSeconds: number;
 };
