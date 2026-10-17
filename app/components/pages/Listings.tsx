@@ -71,6 +71,8 @@ export function MyListings() {
     </Workspace>
   );
 }
+const MIN_DESCRIPTION = 10;
+
 export function NewListing() {
   const router = useRouter();
   const [description, setDescription] = useState("");
@@ -122,7 +124,7 @@ export function NewListing() {
         <label htmlFor="brief-description">¿Qué necesitas?</label>
         <textarea
           id="brief-description"
-          minLength={10}
+          minLength={MIN_DESCRIPTION}
           maxLength={5000}
           value={description}
           disabled={busy || !!created}
@@ -146,7 +148,7 @@ export function NewListing() {
           <button
             className="btn-primary"
             disabled={
-              busy || uploading || (!file && description.trim().length < 10)
+              busy || uploading || (!file && description.trim().length < MIN_DESCRIPTION)
             }
           >
             {busy ? "Preparando…" : "Estructurar con IA"}
@@ -155,7 +157,7 @@ export function NewListing() {
             type="button"
             className="btn-secondary"
             disabled={
-              busy || uploading || (!file && description.trim().length < 10)
+              busy || uploading || (!file && description.trim().length < MIN_DESCRIPTION)
             }
             onClick={() => void create(false)}
           >
@@ -167,6 +169,13 @@ export function NewListing() {
             </Link>
           )}
         </div>
+        {!file && description.trim().length < MIN_DESCRIPTION && (
+          <p role="status" className="field-help">
+            {description.trim().length === 0
+              ? `Escribe al menos ${MIN_DESCRIPTION} caracteres o adjunta un archivo para continuar.`
+              : `Escribe ${MIN_DESCRIPTION - description.trim().length} caracteres más (mínimo ${MIN_DESCRIPTION}) o adjunta un archivo para continuar.`}
+          </p>
+        )}
         <p className="field-help">
           Se guarda un borrador. Publicar una oportunidad no bloquea fondos.
         </p>
