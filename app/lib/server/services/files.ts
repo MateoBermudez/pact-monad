@@ -176,6 +176,15 @@ export async function getSignedFileUrl(userId: string | null, fileId: string): P
   return { url: await signObjectUrl(file.storage_path, 300, download), file: toDto(file) };
 }
 
+// Nombre y tipo de un archivo, con la misma regla de acceso que la descarga y sin firmar ninguna URL.
+export async function getFileInfo(userId: string | null, fileId: string): Promise<FileDto> {
+  const file = await loadFile(fileId);
+  if (!(await canRead(userId, file))) {
+    throw userId ? forbidden("No tienes acceso a este archivo") : new ApiError(401, "unauthenticated", "Inicia sesión para ver este archivo");
+  }
+  return toDto(file);
+}
+
 export async function requireOwnedFile(userId: string, fileId: string, purpose: FilePurpose): Promise<FileRow> {
   const file = await loadFile(fileId);
   if (file.owner_id !== userId || file.purpose !== purpose) throw forbidden("El archivo no es tuyo o no es del tipo esperado");
