@@ -18,6 +18,7 @@ import { STATUS_NAMES, STATUS_BADGE, short } from "@/lib/shared/ui-pact";
 import { EXPLORER_URL } from "@/lib/shared/chain";
 import { api, jsonRequest } from "@/lib/client/api";
 import { sendEscrowAction } from "@/lib/client/escrow-wallet";
+import { uploadFile } from "@/lib/client/files";
 import { usePact } from "@/lib/client/pact-context";
 import { subscribeToChanges } from "@/lib/client/realtime";
 import { AgreementChat } from "@/components/AgreementChat";
@@ -39,6 +40,7 @@ export default function PactDetail({ id }: { id: string }) {
   const [uploading, setUploading] = useState(false);
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [note, setNote] = useState("");
+  const [deliveryText, setDeliveryText] = useState("");
   const noteError = deliveryNoteError(note);
   const urlError = deliveryUrlError(evidenceUrl);
   const [evidenceFile, setEvidenceFile] = useState<FileDto | null>(null);
@@ -97,14 +99,25 @@ export default function PactDetail({ id }: { id: string }) {
     setBusy(true);
     setError(null);
     try {
-      const args =
-        method === "registerDelivery"
-          ? [
-              agreement.chainAgreementId,
-              evidenceFile ? fileReference(evidenceFile.id) : evidenceUrl,
-              note,
-            ]
-          : [agreement.chainAgreementId];
+      let args: unknown[] = [agreement.chainAgreementId];
+      if (method === "registerDelivery") {
+        // La entrega es un enlace, un archivo o un texto: solo una de las tres. El texto se guarda como archivo .txt para
+        // que quede registrado en el contrato y la IA pueda leerlo entero.
+        const text = deliveryText.trim();
+        const provided = [evidenceUrl.trim(), evidenceFile, text].filter(Boolean).length;
+        if (provided !== 1) {
+          throw new Error("Elige una sola forma de entregar: un enlace, un archivo o un texto.");
+        }
+        let evidence = evidenceFile ? fileReference(evidenceFile.id) : evidenceUrl.trim();
+        if (text) {
+          const saved = await uploadFile(
+            new File([text], "entrega.txt", { type: "text/plain" }),
+            "evidence",
+          );
+          evidence = fileReference(saved.id);
+        }
+        args = [agreement.chainAgreementId, evidence, note];
+      }
       const hash = await sendEscrowAction(
         method,
         args,
@@ -313,7 +326,7 @@ export default function PactDetail({ id }: { id: string }) {
           <label className="block space-y-2 text-sm">
             Enlace a la evidencia
             <input
-              required={!evidenceFile}
+              required={!evidenceFile && !deliveryText.trim()}
               type="url"
               value={evidenceUrl}
               onChange={(e) => setEvidenceUrl(e.target.value)}
@@ -328,7 +341,21 @@ export default function PactDetail({ id }: { id: string }) {
             disabled={busy}
           />
           <label className="block space-y-2 text-sm">
-            Nota de entrega
+            O escribe aquí la entrega
+            <textarea
+              rows={6}
+              maxLength={30000}
+              value={deliveryText}
+              onChange={(e) => setDeliveryText(e.target.value)}
+              className="w-full rounded-xl border p-3"
+              aria-describedby="delivery-text-help"
+            />
+            <span id="delivery-text-help" className="text-xs text-muted-foreground">
+              Elige una sola forma de entregar: enlace, archivo o texto. La IA lee el texto completo y los archivos de texto; de los demás archivos solo ve el nombre.
+            </span>
+          </label>
+          <label className="block space-y-2 text-sm">
+            Nota de entrega (breve)
             <textarea
               required
               value={note}

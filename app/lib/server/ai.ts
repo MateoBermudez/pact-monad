@@ -65,6 +65,8 @@ export type ReviewInput = {
   rules: { position: number; criterion: string; weight: number }[];
   providerNote: string;
   evidenceUrl: string;
+  // Texto de la entrega (escrito o leído de un archivo de texto): lo único que la IA lee entero.
+  evidenceText?: string;
 };
 
 export type ReviewOutput = {
@@ -125,6 +127,7 @@ export async function reviewWithAi(input: ReviewInput): Promise<ReviewOutput> {
     rules: input.rules,
     provider_note: input.providerNote,
     evidence_url: input.evidenceUrl,
+    evidence_text: input.evidenceText ?? null,
   };
   const out = await callAi("/review-evidence", body, reviewResponseSchema, 30_000);
   return {

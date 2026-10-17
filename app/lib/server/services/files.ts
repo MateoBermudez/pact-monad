@@ -185,6 +185,26 @@ export async function getFileInfo(userId: string | null, fileId: string): Promis
   return toDto(file);
 }
 
+// Límites con los que se lee una entrega de texto para la IA (pact-ai acepta hasta 30.000 caracteres).
+const MAX_TEXT_FILE_BYTES = 1024 * 1024;
+export const MAX_EVIDENCE_TEXT_CHARS = 30_000;
+
+// Si la evidencia es un archivo de texto (texto escrito en la app, código, markdown, JSON, CSV...), devuelve su contenido
+// para que la IA lo lea; con cualquier otro formato (PDF, imágenes, binarios) devuelve null y la IA solo ve su descripción.
+export async function readEvidenceText(userId: string | null, fileId: string): Promise<string | null> {
+  const file = await loadFile(fileId);
+  if (!(await canRead(userId, file))) return null;
+  if (Number(file.size_bytes) > MAX_TEXT_FILE_BYTES) return null;
+  const bytes = await downloadObject(file.storage_path);
+  if (bytes.includes(0)) return null;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    return text ? text.slice(0, MAX_EVIDENCE_TEXT_CHARS) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function requireOwnedFile(userId: string, fileId: string, purpose: FilePurpose): Promise<FileRow> {
   const file = await loadFile(fileId);
   if (file.owner_id !== userId || file.purpose !== purpose) throw forbidden("El archivo no es tuyo o no es del tipo esperado");

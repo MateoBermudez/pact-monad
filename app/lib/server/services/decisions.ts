@@ -20,7 +20,7 @@ import type {
 } from "@/lib/shared/agreements";
 import { trimMon } from "@/lib/shared/money";
 import { referencedFileId } from "@/lib/shared/file-reference";
-import { getFileInfo } from "@/lib/server/services/files";
+import { getFileInfo, readEvidenceText } from "@/lib/server/services/files";
 import type { FileDto } from "@/lib/shared/files";
 
 // pact-ai acepta como máximo 512 caracteres de "evidencia".
@@ -357,12 +357,14 @@ export async function reviewAgreement(args: { agreementId: string; clientId: str
     const evidenceUrl = fileId
       ? describeEvidenceFile(await getFileInfo(args.clientId, fileId))
       : (agreement.evidence_url ?? "").slice(0, MAX_EVIDENCE_TEXT);
+    const evidenceText = fileId ? ((await readEvidenceText(args.clientId, fileId)) ?? undefined) : undefined;
     ai = await withCredits(args.clientId, "review", () =>
       reviewWithAi({
         requirements: agreement.listing_description ?? agreement.description ?? "",
         rules,
         providerNote: agreement.provider_note ?? "",
         evidenceUrl,
+        evidenceText,
       }),
     );
   } catch (error) {
