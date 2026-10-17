@@ -69,7 +69,7 @@ export function WelcomeTour() {
         </article>)}
         {last && <div className="welcome-destinations">
           <h2>¿Por dónde quieres empezar?</h2>
-          {(!roles || roles.includes("client")) && <Link className="btn-primary" href="/solicitudes/nueva">Publicar una solicitud <ArrowRight size={18} /></Link>}
+          {(!roles || roles.includes("client")) && <Link className="btn-primary" href="/crear">Publicar una solicitud <ArrowRight size={18} /></Link>}
           {(!roles || roles.includes("provider")) && <Link className="btn-secondary" href="/explorar">Explorar oportunidades <Compass size={18} /></Link>}
           <Link className="workspace-link" href="/dashboard">Ir a mis acuerdos <ArrowRight size={16} /></Link>
         </div>}

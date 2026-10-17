@@ -20,6 +20,25 @@ export const reviewSchema = z.object({
     .refine((v) => !/^0x0{40}$/i.test(v)),
 });
 
+export const reviewListingSchema = reviewSchema.omit({ provider: true });
+
+export const MIN_RULE_LENGTH = 5;
+export const MAX_RULE_LENGTH = 300;
+export const MAX_RULES = 12;
+export const FALLBACK_RULE = "La entrega cumple íntegramente la descripción, los entregables y los formatos confirmados en la solicitud";
+
+export function parseRuleLines(text: string): { rules: string[]; error: string | null } {
+  const rules = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (rules.length > MAX_RULES) return { rules, error: `Escribe como máximo ${MAX_RULES} condiciones.` };
+  if (rules.some((rule) => rule.length < MIN_RULE_LENGTH || rule.length > MAX_RULE_LENGTH)) {
+    return { rules, error: `Cada condición debe tener de ${MIN_RULE_LENGTH} a ${MAX_RULE_LENGTH} caracteres.` };
+  }
+  return { rules, error: null };
+}
+
 export function providerError(
   provider: string,
   client?: string,

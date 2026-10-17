@@ -15,6 +15,10 @@ export function normalizeKeywords(input: readonly string[]): string[] {
   return [...unique].slice(0, MAX_KEYWORDS);
 }
 
+export function splitKeywords(value: string): string[] {
+  return normalizeKeywords(value.split(","));
+}
+
 const STOPWORDS = new Set(
   (
     "para como con sin por que los las del una uno unos unas este esta estos estas ese esa esos esas pero sobre entre " +

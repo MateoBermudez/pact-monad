@@ -57,7 +57,7 @@ export default function Explore() {
             Talento
           </button>
         </div>
-        <Link className="btn-primary" href="/solicitudes/nueva">
+        <Link className="btn-primary" href="/crear">
           Publicar oportunidad <ArrowUpRight size={17} />
         </Link>
       </div>

@@ -167,14 +167,7 @@ const DOCK: {
   match: (p: string) => boolean;
 }[] = [
   { to: "/", label: "Inicio", icon: Home, match: (p) => p === "/" },
-  {
-    to: "/explorar",
-    label: "Explorar",
-    icon: Compass,
-    match: (p) =>
-      !p.startsWith("/solicitudes/nueva") &&
-      ["/explorar", "/solicitudes", "/postulaciones", "/personas"].some((prefix) => p.startsWith(prefix)),
-  },
+  { to: "/explorar", label: "Explorar", icon: Compass, match: (p) => ["/explorar", "/solicitudes", "/postulaciones", "/personas"].some(prefix=>p.startsWith(prefix)) },
   {
     to: "/dashboard",
     label: "Acuerdos",
@@ -185,7 +178,7 @@ const DOCK: {
     to: "/crear",
     label: "Crear",
     icon: Plus,
-    match: (p) => p.startsWith("/crear") || p.startsWith("/solicitudes/nueva"),
+    match: (p) => p.startsWith("/crear"),
   },
   {
     to: "/configuracion",

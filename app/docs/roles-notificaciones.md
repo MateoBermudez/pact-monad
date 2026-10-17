@@ -83,7 +83,7 @@ Evento `listing.matched` con `nextAction.action = "apply_to_listing"` y `youAct 
 
 ## Del borrador a la propuesta elegida
 
-`/crear` ya no pide la wallet del proveedor: lleva a `/solicitudes/nueva`. El orden es:
+`/crear` es la única pantalla para crear (`/solicitudes/nueva` redirige a ella) y ya no pide la wallet del proveedor. Sus tres pasos son Describe, Revisa (con palabras clave y condiciones editables) y Publica. El orden es:
 
 1. El cliente describe el trabajo o sube un brief (PDF, DOCX, imagen o texto) y la IA lo estructura en un documento por
    secciones (contexto, alcance y entregables, requisitos del perfil, condiciones, forma de entrega, por definir), con

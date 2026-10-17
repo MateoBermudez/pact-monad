@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import View from "@/components/pages/Index";
 import { Suspense } from "react";
 type Props = { searchParams: Promise<{ provider?: string | string[] }> };
@@ -10,13 +9,12 @@ async function Content({ searchParams }: Props) {
     !/^0x0{40}$/.test(provider)
       ? provider
       : "";
-  if (!address) redirect("/solicitudes/nueva");
   return <View key={address} initialProvider={address} />;
 }
 
 export default function Page(props: Props) {
   return (
-    <Suspense fallback={<p>Cargando acuerdo…</p>}>
+    <Suspense fallback={<p>Cargando…</p>}>
       <Content {...props} />
     </Suspense>
   );
