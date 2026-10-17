@@ -8,11 +8,24 @@ import { Header, Dock } from "./Shell";
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const onboarding = [
+    "/iniciar-sesion",
+    "/registro",
+    "/perfil",
+    "/terminos",
+    "/privacidad",
+  ].includes(pathname);
   const { error } = usePact();
   return (
-    <div className="min-h-screen">
+    <div className={onboarding ? "onboarding-shell" : "min-h-screen"}>
       <Header />
-      <main className="mx-auto max-w-5xl px-4 pb-48 pt-6">
+      <main
+        className={
+          onboarding
+            ? "mx-auto max-w-6xl px-4 pb-4 pt-2"
+            : "mx-auto max-w-5xl px-4 pb-48 pt-6"
+        }
+      >
         {error && (
           <p
             role="alert"
@@ -30,7 +43,7 @@ function Shell({ children }: { children: ReactNode }) {
           {children}
         </motion.div>
       </main>
-      <Dock />
+      {!onboarding && <Dock />}
       <Toaster position="bottom-center" offset={104} />
     </div>
   );

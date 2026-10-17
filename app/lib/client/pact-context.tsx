@@ -138,8 +138,8 @@ export function PactProvider({ children }: { children: ReactNode }) {
         if (!active) return;
         setUser(session);
         if (session) {
-          setAddress(session.wallet);
-          await refresh();
+          setAddress(session.wallet ?? "");
+          if (session.wallet) await refresh();
         }
       })
       .catch((e: unknown) => {
@@ -214,7 +214,9 @@ export function PactProvider({ children }: { children: ReactNode }) {
         connected,
         signedIn:
           !!user &&
-          (!address || user.wallet.toLowerCase() === address.toLowerCase()),
+          (!address ||
+            !user.wallet ||
+            user.wallet.toLowerCase() === address.toLowerCase()),
         loading,
         error,
         balance,

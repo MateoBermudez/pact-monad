@@ -10,6 +10,7 @@ import {
   LogOut,
   Plus,
   Settings,
+  User,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -78,6 +79,13 @@ export function Header() {
             />
           </Link>
           <div className="flex items-center gap-2">
+            <Link
+              href="/perfil"
+              aria-label="Mi perfil"
+              className="rounded-full bg-primary/30 p-2"
+            >
+              <User className="h-5 w-5" />
+            </Link>
             <span className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-card/80 px-4 text-xs text-muted-foreground shadow-sm ring-1 ring-border backdrop-blur">
               <span className="relative flex h-2 w-2">
                 <span
