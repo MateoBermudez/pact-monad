@@ -179,6 +179,38 @@ El worker corre en `POST /api/internal/worker` (exige `x-pact-secret` = `INTERNA
 Vercel por `GET`). Tras cada sincronización con eventos nuevos la propia app lo dispara en segundo plano para que todo salga
 al instante; el respaldo durable es quien llame a ese endpoint.
 
+## Despliegue en Vercel
+
+Está pensado para funcionar sin servidor propio: nada depende de un proceso encendido ni de que alguien visite la app.
+
+1. **Proyecto:** importar el repo con *Root Directory* = `app`. Vercel detecta pnpm (campo `packageManager`).
+2. **Variables de entorno** (Production), copiando de `.env.example`. Las `NEXT_PUBLIC_*` se incrustan al compilar, así que
+   deben existir **antes** del build. Marcar como *Sensitive* las claves: `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `AGENT_PRIVATE_KEY`, `INTERNAL_WEBHOOK_SECRET`, `AI_API_SECRET`. Falta `CONTRACT_DEPLOY_BLOCK` y `INDEXER_BLOCK_TAG=finalized`.
+3. **Región:** las funciones corren en `iad1` (US East) por defecto, la misma que Supabase (`us-east-1`): déjalo así.
+4. **Conectar Supabase con la app desplegada** (una vez):
+   ```sh
+   pnpm db:webhooks -- --url https://TU-DOMINIO       # guarda el secreto en Vault, programa pg_cron y prueba la llamada
+   ```
+   Imprime un `INTERNAL_WEBHOOK_SECRET` nuevo: pégalo en Vercel, vuelve a desplegar y repite el comando; debe decir
+   `Prueba : HTTP 200`. Con `--status` ves la configuración y las últimas llamadas; con `--off` se apaga.
+   Usa el dominio de **producción**: si la protección de despliegues está activa, Vercel responde 401 a las llamadas de
+   Supabase.
+5. **El servicio de IA (`pact-ai`) va aparte** (Python): Render, Railway, Fly o Vercel Python. Definir `PACT_AI_SHARED_SECRET`
+   allí y `AI_API_SECRET` aquí. Ojo con los planes gratuitos que se duermen: el primer arranque tarda y afecta la demo.
+
+Qué hace que funcione en Vercel, y por qué:
+
+| Límite de Vercel | Cómo se resuelve |
+|---|---|
+| Las funciones rechazan cuerpos de más de 4,5 MB | Los archivos se suben **directo a Storage** con URL firmada (`uploadFile()`); nunca pasan por una función |
+| No hay proceso permanente: nadie ejecuta el indexador si nadie visita la app | `pg_cron` de Supabase llama a `/api/internal/worker` cada pocos segundos; un disparador de la base lo llama al instante cuando entra trabajo |
+| El cron de Vercel en Hobby solo corre una vez al día | No dependemos de él: `vercel.json` deja uno diario solo como red de seguridad |
+| Varias instancias a la vez | Cada tramo del indexador se reserva con una escritura condicional, las tareas con `SKIP LOCKED` y los pagos del agente con un candado de la base |
+| Una función puede morir a mitad de camino | El trabajo pendiente vive en la base (cola durable con reintentos), no en memoria |
+| Las funciones duran como máximo 300 s | El stream `/api/stream` se corta a los 4 min y el navegador reconecta; `subscribeToChanges()` pasa a consultar cada 5 s si el canal no se sostiene |
+| Cada instancia abre sus propias conexiones | `DB_POOL_MAX` vale 2 por defecto en Vercel; el pooler de Supabase hace el resto |
+
 ## Base de datos
 
 Supabase por el **pooler** (el host directo es solo IPv6). `DATABASE_URL` usa el modo transacción (puerto 6543) con un pool
@@ -194,6 +226,7 @@ pnpm lint
 pnpm build
 pnpm test         # lógica pura de coincidencias (node --test)
 pnpm db:migrate   # aplica db/migrations a Supabase
+pnpm db:webhooks  # conecta Supabase con la app desplegada (ver «Despliegue en Vercel»)
 ```
 
 Variables en `.env.example`; copiar a `.env.local`. Para probar contra una cadena local: `anvil`, desplegar con

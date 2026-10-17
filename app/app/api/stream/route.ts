@@ -2,6 +2,8 @@ import { authed } from "@/lib/server/http";
 import { loadChangeVersion } from "@/lib/server/services/dashboard";
 import { syncAndProcess } from "@/lib/server/services/sync";
 
+export const maxDuration = 300;
+
 const POLL_MS = 2_000;
 const PING_MS = 15_000;
 // El navegador reconecta solo (EventSource); cerrar cada tanto evita conexiones colgadas y respeta los límites de hosting.
