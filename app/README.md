@@ -229,6 +229,7 @@ pnpm build
 pnpm test         # lógica pura de coincidencias (node --test)
 pnpm db:migrate   # aplica db/migrations a Supabase
 pnpm db:webhooks  # conecta Supabase con la app desplegada (ver «Despliegue en Vercel»)
+pnpm db:seed      # datos de ejemplo para la demo (perfiles, solicitudes, calificaciones); `-- --clean` los borra
 ```
 
 Variables en `.env.example`; copiar a `.env.local`. Para probar contra una cadena local: `anvil`, desplegar con
