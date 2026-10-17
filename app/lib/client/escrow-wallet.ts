@@ -68,6 +68,21 @@ export async function connectMetaMask() {
     balance: await getWalletBalanceMon(address),
   };
 }
+// Reconecta en silencio, sin ventanas de MetaMask: solo si la wallet de la cuenta ya está autorizada para este sitio.
+export async function restoreWallet(
+  expected: string,
+): Promise<{ address: string; chainId: number; balance: number } | null> {
+  const eth = getEthereum();
+  if (!eth) return null;
+  const accounts = (await eth.request({ method: "eth_accounts" })) as unknown;
+  const account = Array.isArray(accounts) ? accounts[0] : undefined;
+  if (typeof account !== "string" || account.toLowerCase() !== expected.toLowerCase()) return null;
+  return {
+    address: account,
+    chainId: Number(await eth.request({ method: "eth_chainId" })),
+    balance: await getWalletBalanceMon(account),
+  };
+}
 export async function escrowContract() {
   if (!isAddress(CONTRACT_ADDRESS) || CONTRACT_ADDRESS === ZeroAddress)
     throw new Error(

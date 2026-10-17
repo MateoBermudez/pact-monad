@@ -1,6 +1,8 @@
 "use client";
 
 import { AgreementReview } from "@/components/AgreementReview";
+import { FileUpload } from "@/components/FileUpload";
+import type { FileDto } from "@/lib/shared/files";
 import {
   providerError,
   reviewSchema,
@@ -255,6 +257,8 @@ export default function Index({
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [prompt, setPrompt] = useState("");
+  const [brief, setBrief] = useState<FileDto | null>(null);
+  const [briefBusy, setBriefBusy] = useState(false);
   const [listingId, setListingId] = useState<string | undefined>();
   const [prepared, setPrepared] = useState(false);
   const [rules, setRules] = useState<string[]>([]);
@@ -314,7 +318,7 @@ export default function Index({
     setStep(n);
   };
 
-  const hasText = prompt.trim().length > 0;
+  const hasText = prompt.trim().length > 0 || brief !== null;
 
   const completeManually = () => {
     if (loading) return;
@@ -334,7 +338,7 @@ export default function Index({
 
   const structure = async () => {
     const text = prompt.trim();
-    if (loading || !text) return;
+    if (loading || briefBusy || (!text && !brief)) return;
     setThinkIdx(0);
     setLoading(true);
     setFailed(false);
@@ -342,7 +346,7 @@ export default function Index({
     setOriginal(text);
 
     try {
-      const result = await structureAgreement(text);
+      const result = await structureAgreement(text, brief?.id);
       setPrepared(false);
       setListingId(result.listing.id);
       setRules(result.listing.rules?.map((rule) => rule.criterion) ?? []);
@@ -594,9 +598,23 @@ export default function Index({
                         className="w-full resize-y rounded-2xl bg-transparent px-4 pb-3 pt-4 text-base text-foreground placeholder:text-muted-foreground/80 outline-none disabled:opacity-60"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Podrás editar todos los detalles en el siguiente paso.
-                    </p>
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-foreground">
+                        ¿Tienes un documento o una imagen de lo que quieres?
+                      </p>
+                      <FileUpload
+                        purpose="brief"
+                        value={brief}
+                        onChange={setBrief}
+                        onBusyChange={setBriefBusy}
+                        disabled={loading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Puedes escribir, adjuntar un archivo o ambos. La IA lo
+                        lee para proponer las reglas. Podrás editar todos los
+                        detalles en el siguiente paso.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Quick examples */}
@@ -728,7 +746,7 @@ export default function Index({
                   <button
                     type="button"
                     onClick={() => void structure()}
-                    disabled={loading || !hasText}
+                    disabled={loading || briefBusy || !hasText}
                     className="group press inline-flex items-center justify-between gap-5 rounded-full bg-ink py-2 pl-7 pr-2 text-sm font-bold text-ink-foreground shadow-[0_4px_0_oklch(0.19_0.01_120/0.25)] transition-all enabled:hover:-translate-y-0.5 enabled:active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:justify-center sm:text-base"
                   >
                     <span>

@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -22,6 +23,7 @@ import {
   connectMetaMask,
   getWalletBalanceMon,
   MONAD_CHAIN_ID,
+  restoreWallet,
   switchToMonadTestnet,
 } from "./escrow-wallet";
 import { toPact, type Pact } from "@/lib/shared/ui-pact";
@@ -68,6 +70,8 @@ export function PactProvider({ children }: { children: ReactNode }) {
   const [aiAutoApprove, setAiAutoApprove] = useState(false);
   const [aiLimit, setAiLimit] = useState(0);
   const [changes, setChanges] = useState(0);
+  // Wallet ya verificada en la cuenta; el listener de MetaMask la lee sin volver a montarse.
+  const linkedWallet = useRef<string | null>(null);
   const refresh = useCallback(async () => {
     try {
       const [{ agreements }, { dashboard }] = await Promise.all([
@@ -98,6 +102,7 @@ export function PactProvider({ children }: { children: ReactNode }) {
   const connectWallet = useCallback(async () => {
     const { user: session } = await linkWalletToAccount();
     setUser(session);
+    linkedWallet.current = session.wallet?.toLowerCase() ?? null;
     const wallet = await connectMetaMask();
     setAddress(wallet.address);
     setIsConnected(true);
@@ -154,7 +159,21 @@ export function PactProvider({ children }: { children: ReactNode }) {
         setUser(session);
         if (session) {
           setAddress(session.wallet ?? "");
-          if (session.wallet) await refresh();
+          linkedWallet.current = session.wallet?.toLowerCase() ?? null;
+          if (session.wallet) {
+            // Si MetaMask ya tiene autorizada esa wallet, queda conectada sin botón ni firma.
+            const restored = await restoreWallet(session.wallet).catch(
+              () => null,
+            );
+            if (!active) return;
+            if (restored) {
+              setAddress(restored.address);
+              setIsConnected(true);
+              setBalance(restored.balance);
+              setWrongNetwork(restored.chainId !== MONAD_CHAIN_ID);
+            }
+            await refresh();
+          }
         }
       })
       .catch((e: unknown) => {
@@ -176,8 +195,22 @@ export function PactProvider({ children }: { children: ReactNode }) {
     const eth = (
       typeof window === "undefined" ? undefined : window.ethereum
     ) as WalletEvents | undefined;
-    const stop = watchWalletAccount(() => {
+    const stop = watchWalletAccount((account) => {
       if (!active) return;
+      const expected = linkedWallet.current;
+      if (account && expected && account === expected) {
+        // Volvió a la wallet vinculada: se reconecta sola.
+        void restoreWallet(expected)
+          .then((restored) => {
+            if (!active || !restored) return;
+            setAddress(restored.address);
+            setIsConnected(true);
+            setBalance(restored.balance);
+            setWrongNetwork(restored.chainId !== MONAD_CHAIN_ID);
+          })
+          .catch(() => undefined);
+        return;
+      }
       setAddress("");
       setIsConnected(false);
       setPacts([]);

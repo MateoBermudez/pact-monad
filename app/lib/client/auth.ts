@@ -67,6 +67,8 @@ export async function linkWalletToAccount(): Promise<{
       "Selecciona en MetaMask la wallet que ya está vinculada a tu cuenta.",
     );
   }
+  // La wallet ya está verificada en esta cuenta y MetaMask tiene esa misma dirección: no se vuelve a firmar.
+  if (session.wallet) return { user: session, merged: false };
   const { message } = await postJson<{ message: string }>("/api/auth/nonce", {
     address,
   });
