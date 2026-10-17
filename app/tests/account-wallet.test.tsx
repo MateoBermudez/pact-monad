@@ -1,0 +1,40 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { AccountWallet } from "@/components/AccountWallet";
+import type { ProfileDto } from "@/lib/shared/profile";
+const state = vi.hoisted(() => ({ address: "", connected: false, connectWallet: vi.fn() }));
+vi.mock("@/lib/client/pact-context", () => ({ usePact: () => state, short: (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}` }));
+const wallet = "0xc391455c0057a38f23286158b815f8c676c3f4f1";
+const profile = { id: "1", displayName: "Maryhug Durán", username: "maryhug", wallet: null } as ProfileDto;
+afterEach(() => { cleanup(); state.connected = false; state.address = ""; state.connectWallet.mockReset(); vi.unstubAllGlobals(); });
+it("muestra la vinculación guardada y copia la dirección completa sin volver a verificar", async () => {
+  const copy = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText: copy } });
+  state.connected = true;
+  render(<AccountWallet profile={{ ...profile, wallet }} onConnected={vi.fn()} />);
+  expect(screen.getByText("Verificada")).toBeInTheDocument();
+  expect(screen.getByText("Maryhug Durán")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Wallet verificada" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Copiar dirección" }));
+  await screen.findByText("Dirección copiada.");
+  expect(copy).toHaveBeenCalledWith(wallet);
+  expect(state.connectWallet).not.toHaveBeenCalled();
+});
+it("no inventa una dirección y verifica con el flujo existente", async () => {
+  state.connectWallet.mockResolvedValue(wallet);
+  const reload = vi.fn();
+  render(<AccountWallet profile={profile} onConnected={reload} />);
+  expect(screen.getByText("Por verificar")).toBeInTheDocument();
+  expect(screen.getByText("Sin conectar")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Copiar dirección" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Conectar y verificar" }));
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  expect(screen.getByText("Verificada")).toBeInTheDocument();
+});
+it("conserva el estado pendiente si se cancela la firma", async () => {
+  state.connectWallet.mockRejectedValue(new Error("Firma cancelada"));
+  render(<AccountWallet profile={profile} onConnected={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Conectar y verificar" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Firma cancelada");
+  expect(screen.getByText("Por verificar")).toBeInTheDocument();
+});

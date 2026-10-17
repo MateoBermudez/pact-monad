@@ -12,20 +12,18 @@ import { api, jsonRequest } from "@/lib/client/api";
 import { oauthStartUrl, signOut } from "@/lib/client/auth";
 import type { IdentityDto } from "@/lib/shared/auth";
 import type { ProfileDto, Availability } from "@/lib/shared/profile";
-import { usePact } from "@/lib/client/pact-context";
 import { ProfileSkills } from "@/components/ProfileSkills";
 import { LocationInput } from "@/components/LocationInput";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { AccountWallet } from "@/components/AccountWallet";
 export default function Account() {
   const params = useSearchParams();
   const state = useResource<{ profile: ProfileDto }>("/api/profile");
   const identities = useResource<{ identities: IdentityDto[] }>(
     "/api/auth/identities",
   );
-  const { connected, connectWallet } = usePact();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   return (
     <Workspace
       title="Tu cuenta, a tu manera."
@@ -46,40 +44,7 @@ export default function Account() {
             onSaved={() => void state.reload()}
           />
           <div className="workspace-list">
-            <section className="workspace-card">
-              <h2>Tu wallet</h2>
-              <p className="workspace-code">
-                {state.data.profile.wallet ??
-                  "Aún no has vinculado una wallet."}
-              </p>
-              <p>
-                La dirección se verifica con una firma y se usa para tus
-                transacciones.
-              </p>
-              <button
-                className="btn-primary"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  setError("");
-                  try {
-                    await connectWallet();
-                    await state.reload();
-                    setNotice("Wallet verificada y conectada.");
-                  } catch (e) {
-                    setError(messageOf(e));
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                {busy
-                  ? "Verificando…"
-                  : connected
-                    ? "Verificar wallet"
-                    : "Conectar MetaMask"}
-              </button>
-            </section>
+            <AccountWallet key={state.data.profile.id} profile={state.data.profile} onConnected={() => void state.reload()} />
             <section className="workspace-card">
               <h2>Formas de acceso</h2>
               <LoadState {...identities} retry={identities.reload} />
@@ -152,11 +117,6 @@ export default function Account() {
             {error && (
               <p role="alert" className="auth-error">
                 {error}
-              </p>
-            )}
-            {notice && (
-              <p role="status" className="workspace-notice">
-                {notice}
               </p>
             )}
           </div>

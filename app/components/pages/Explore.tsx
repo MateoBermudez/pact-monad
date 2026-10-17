@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, ArrowUpRight, BriefcaseBusiness, Users } from "lucide-react";
 import {
   Workspace,
@@ -29,16 +30,13 @@ export default function Explore() {
       title="Encuentra tu próximo proyecto."
       intro="Conecta lo que sabes hacer con quienes lo necesitan."
     >
-      <div className="workspace-banner">
+      <div className="workspace-banner workspace-explore-banner">
         <div>
           <span>Talento + acuerdos claros</span>
           <h2>Una buena conexión empieza aquí.</h2>
           <p>Explora oportunidades o encuentra a la persona para tu idea.</p>
         </div>
-        <div className="workspace-banner-symbol">
-          <Users size={72} />
-          <ArrowUpRight size={38} />
-        </div>
+        <Image unoptimized src="/illustrations/explore-vista-final.svg" alt="" aria-hidden="true" width={927} height={400} className="workspace-explore-art" />
       </div>
       <div className="workspace-toolbar">
         <div className="workspace-tabs" role="group" aria-label="Qué explorar">

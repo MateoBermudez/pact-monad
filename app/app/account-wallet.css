@@ -1,0 +1,33 @@
+.account-wallet-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+.account-wallet-heading h2 { margin: 0; }
+.account-wallet-status { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #a2a596; border-radius: 30px; padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+.account-wallet-status.is-verified { background: #eff9d2; border-color: #b8d679; }
+.account-wallet-stack { position: relative; margin: 6px 0 22px; isolation: isolate; }
+.account-wallet-stack::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 16px; background: #d7ff75; transform: rotate(-4deg); }
+.account-wallet-pass { position: relative; overflow: hidden; border-radius: 16px; padding: 22px; min-height: 230px; color: #f9faee; background-color: #11140e; background-image: linear-gradient(#f2ffb508 1px, transparent 1px), linear-gradient(90deg, #f2ffb508 1px, transparent 1px); background-size: 28px 28px; box-shadow: 0 8px 18px #11140e18; }
+.account-wallet-brand { display: flex; justify-content: space-between; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.account-wallet-brand > span { display: flex; align-items: center; gap: 8px; font-size: 25px; font-weight: 600; color: #d2f975; }
+.account-wallet-brand img, .account-wallet-emblem { filter: brightness(0) saturate(100%) invert(89%) sepia(57%) saturate(436%) hue-rotate(24deg) brightness(105%) contrast(95%); }
+.account-wallet-brand small { border: 1px solid #9aa187; padding: 4px 10px; border-radius: 20px; font-size: 9px; letter-spacing: .1em; white-space: nowrap; }
+.account-wallet-address { position: relative; z-index: 1; margin: 30px 0 26px; }
+.account-wallet-address > span, .account-wallet-holder > span { display: block; font-size: 9px; letter-spacing: .19em; font-weight: 600; color: #c8cebc; margin-bottom: 7px; }
+.account-wallet-address strong { font-family: monospace; font-size: clamp(19px, 2vw, 24px); letter-spacing: .02em; }
+.account-wallet-holder { position: relative; z-index: 1; max-width: 65%; }
+.account-wallet-holder strong { display: block; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.account-wallet-emblem { position: absolute; width: 140px; height: 140px; right: -35px; top: 66px; opacity: .85; transform: rotate(15deg); }
+.account-wallet-connect { display: flex; align-items: center; gap: 7px; position: absolute; right: 18px; bottom: 20px; font-size: 9px; letter-spacing: .12em; }
+.account-wallet-connect svg { color: #d2f975; }
+.account-wallet .account-wallet-caption { font-size: 15px; line-height: 1.4; margin: 0 0 12px; }
+.account-wallet-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.account-wallet-actions button { flex: 1; min-width: 145px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; font-size: 14px; }
+.account-wallet-help, .account-wallet-full { display: block; font-size: 13px; line-height: 1.5; color: #6d7464; }
+.account-wallet-full { margin-top: 10px; }
+.account-wallet-full summary { cursor: pointer; }
+.account-wallet .account-wallet-full p { font-family: monospace; font-size: 12px; overflow-wrap: anywhere; user-select: all; margin-bottom: 0; }
+@media (max-width: 420px) {
+  .account-wallet-pass { padding: 18px; }
+  .account-wallet-brand > span { font-size: 22px; }
+  .account-wallet-brand small { font-size: 8px; padding: 4px 6px; }
+  .account-wallet-connect { font-size: 8px; right: 12px; gap: 4px; }
+  .account-wallet-holder { max-width: 55%; }
+}
