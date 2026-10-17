@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { usePact } from "@/lib/client/pact-context";
@@ -14,12 +14,36 @@ export function NotificationBell() {
   const hydrated = useHydrated();
   const { items, unread, markAllRead, markRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !containerRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   if (!hydrated || !signedIn) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
         aria-label={unread > 0 ? `Notificaciones, ${unread} sin leer` : "Notificaciones"}
         aria-expanded={open}
